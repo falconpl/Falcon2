@@ -150,7 +150,9 @@ m"abc".insert(1,"b")// abbc
 "a,,b".splittr(',') // ['a','b']
 " a ".trim()        // returns "a"
 x=m" a "; x.atrim() // x <= "a"
-Arrays
+```
+### Arrays
+```
 a = [1,2,3]     // create
 > a[0]          // access
 x,y,z = a       // distribute
@@ -190,6 +192,7 @@ x.erase('a')    // like -=
 ```
 
 ### Dictionaries
+```
 x=['a'=>0,'b'=>1]   // or...
 y=.['a'=>0 'b'=>1]  // without ','
 > x['a']            // 1
@@ -201,6 +204,7 @@ z = x.pseudo        // keys become
 > z.a,',',z.b       //  properties
 x<<=['a'=>9,'c'=>1] // merge
 y >>=['a','b']      // remove keys
+```
 
 ### Basic statements
 ```
@@ -236,6 +240,7 @@ catch in variable   // any error
 finally
    /* cleanup stuff */
 end
+```
 
 ### More on statements
 Block statements can use ':' to declare singlestatement sub-blocks:
