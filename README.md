@@ -28,20 +28,20 @@ The `>` (fast print and new line) and `>>` (fast print) are used to perform basi
 ```
 
 ### Operators
-Mathematical operators: `+`, `-`, `*`, `/`, `%` (int modulo), `**` (power), `<<` (bitwise shitf), `>>`
-Auto-math: `+=`, `-=`, etc.
-Inc/dec: `++x`, `x++`, `--x`, `x--`
-Comparison: `==`, `===` (exactly), `!=`, `>`, `>=`, `<`, `<=`
-Logic: `and`, `or`, `not`
-Out-of-band: `^+` x (set), `^-` x (reset),
-`^%` x (swap), `^$` x (check)
-Bitwies: `^&` (and), `^|` (or), `^!` (not), `^^` (xor)
+* Mathematical operators: `+`, `-`, `*`, `/`, `%` (int modulo), `**` (power), `<<` (bitwise shitf), `>>`
+* Auto-math: `+=`, `-=`, etc.
+* Inc/dec: `++x`, `x++`, `--x`, `x--`
+* Comparison: `==`, `===` (exactly), `!=`, `>`, `>=`, `<`, `<=`
+* Logic: `and`, `or`, `not`
+* Out-of-band: `^+` x (set), `^-` x (reset),
+* `^%` x (swap), `^$` x (check)
+* Bitwise: `^&` (and), `^|` (or), `^!` (not), `^^` (xor)
 
 ### Numbers
-Integers: `100`, `-1000`, `100_000`, `1_000_000`
-Floating pt: `10.03`, `4.02e16`
-Hex: `0x123ABC` `0x1def` (in strings: `"\xaDf0"`)
-Oct: `023` (dec: 19), Binary: `b1101` (dec: 13)
+* Integers: `100`, `-1000`, `100_000`, `1_000_000`
+* Floating pt: `10.03`, `4.02e16`
+* Hex: `0x123ABC` `0x1def` (in strings: `"\xaDf0"`)
+* Oct: `023` (dec: 19), Binary: `b1101` (dec: 13)
 
 Number are considered as objects, and they can have properties and methods. For example:
 ```
@@ -71,6 +71,7 @@ z = 'a literal ''x'' here.'
 > 'a'*3        // 'aaa'
 > 'a'%65%66%67 // 'aABC'
 z[1] = 'a'     // ERROR, immutable
+```
 
 ### Multiline strings
 Start a ML-string opening it and going next line immediately.
@@ -95,12 +96,14 @@ x[3:] = 65     // m"newA" A=65!
 ```
 
 ### International strings
+```
 VMProcess.current.setTT( [
   "i18n" => "International"
   "Another" => "Autre"
   ])
 > i"i18n"    // International
 > i"Another" // Autre
+```
 
 ### Regular expressions
 ```
