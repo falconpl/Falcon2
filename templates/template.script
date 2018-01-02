@@ -1,6 +1,6 @@
 ##############################################################################
 #   FALCON - The Falcon Programming Language
-#   FILE: @name@
+#   FILE: @path@
 #
 #   @short@
 #   -------------------------------------------------------------------
@@ -12,4 +12,8 @@
 #   (C) Copyright @year@ The Falcon Programming Language
 #   Released under Apache 2.0 License.
 ##############################################################################
+
+
+
+# end of @name@
 

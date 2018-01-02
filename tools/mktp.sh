@@ -7,7 +7,7 @@
 #   -------------------------------------------------------------------
 #   Author: Giancarlo Niccolai
 #   Begin : Tue, 02 Jan 2018 11:41:45 +0000
-#   Touch : Tue, 02 Jan 2018 11:41:45 +0000
+#   Touch : Tue, 02 Jan 2018 13:53:48 +0000
 #
 #   -------------------------------------------------------------------
 #   (C) Copyright 2018 The Falcon Programming Language
@@ -58,7 +58,7 @@ echo "Configuring $TARGET"
 cat $SOURCE | \
 	sed -e "s/@name@/$TGNAME/" -e "s/@short@/$DESC/" -e "s/@begin@/$NOW/" \
 		-e "s/@author@/$AUTHOR/" -e "s/@DEFINE_NAME@/$DEFINE_NAME/" \
-		-e "s/@year@/$YEAR/" \
+		-e "s/@year@/$YEAR/" -e "s/@path@/$TARGET/"\
 	> "$TARGET"
 popd > /dev/null
 
