@@ -1,0 +1,13 @@
+#!/bin/bash
+
+SCRIPTPATH="$(cd "$(dirname "$0")"; pwd -P)"
+ROOTDIR="$SCRIPTPATH/../.."
+
+git diff --cached --name-status | while read st file; do
+        # skip deleted files
+        if [ "$st" == 'D' ]; then continue; fi
+        # Change the TOUCH date
+	($ROOTDIR/tools/touchdt.sh "$file" && git add "$file") || \
+		(echo "Failed to update date on $file" && exit 1)
+done
+
