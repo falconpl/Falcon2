@@ -1,0 +1,97 @@
+/*****************************************************************************
+  FALCON - The Falcon Programming Language
+  FILE: config.h
+
+  System dependent compile-time directives
+  -------------------------------------------------------------------
+  Author: Giancarlo Niccolai
+  Begin : Tue, 02 Jan 2018 15:58:57 +0000
+  Touch : Tue, 02 Jan 2018 18:31:24 +0000
+
+  -------------------------------------------------------------------
+  (C) Copyright 2018 The Falcon Programming Language
+  Released under Apache 2.0 License.
+******************************************************************************/
+
+#ifndef _FALCON_CONFIG_H_
+#define _FALCON_CONFIG_H_
+
+namespace Falcon {
+
+//============================================
+// Version informations
+//
+#define FALCON_VERSION_MAJOR 			@FALCON_VERSION_MAJOR@
+#define FALCON_VERSION_MINOR 			@FALCON_VERSION_MINOR@
+#define FALCON_VERSION_REVISION 		@FALCON_VERSION_REVISION@
+#define FALCON_VERSION_PATCH			@FALCON_VERSION_PATCH@
+
+#define FALCON_VERSION_NUM          		( @FALCON_VERSION_MAJOR@ <<24 | @FALCON_VERSION_MINOR@ <<16 | @FALCON_VERSION_REVISION@ << 8 | @FALCON_VERSION_PATCH@ )
+#define FALCON_VERSION             		"@FALCON_VERSION_ID@"
+#define FALCON_VERSION_NAME         		"@FALCON_VERSION_NAME@"
+
+#define FALCON_VERSION_SPEC			"@FALCON_VERSION_SPEC@"
+#define FALCON_VERSION_BUILD_ID			@FALCON_VERSION_BUILD_ID@
+
+//============================================
+// Version RCINFO
+//
+
+#define FALCON_VERSION_RCINFO 	    		"@FALCON_VERSION_RC@"
+#define FALCON_VERSION_RCINFO_N 		@FALCON_VERSION_RC@
+
+//============================================
+// System informations
+//
+
+// Basic system. May be either
+//   - FALCON_SYSTEM_UNIX
+//   - FALCON_SYSTEM_WIN
+//   - FALCON_SYSTEM_MAC
+
+#cmakedefine FALCON_SYSTEM_UNIX
+#cmakedefine FALCON_SYSTEM_WIN
+#cmakedefine FALCON_SYSTEM_MAC
+
+#define FALCON_HOST_SYSTEM          		"@FALCON_HOST_SYSTEM@"
+#define FALCON_LITTLE_ENDIAN        		@FALCON_LITTLE_ENDIAN@
+
+//============================================
+// Config informations
+//
+#ifdef FALCON_SYSTEM_WIN
+   #define FALCON_DEFAULT_BIN          "@CMAKE_INSTALL_PREFIX@\\@FALCON_BIN_DIR@"
+   #define FALCON_DEFAULT_LIB          "@CMAKE_INSTALL_PREFIX@\\@FALCON_LIB_DIR@"
+   #define FALCON_DEFAULT_CONFIG       "@CMAKE_INSTALL_PREFIX@\\etc"
+   #define FALCON_DEFAULT_LOAD_PATH    ".;@CMAKE_INSTALL_PREFIX@\\@FALCON_MOD_DIR@"
+#else
+   #define FALCON_DEFAULT_BIN          "@CMAKE_INSTALL_PREFIX@/@FALCON_BIN_DIR@"
+   #define FALCON_DEFAULT_LIB          "@CMAKE_INSTALL_PREFIX@/@FALCON_LIB_DIR@"
+   #define FALCON_DEFAULT_CONFIG       "/etc"
+   #define FALCON_DEFAULT_LOAD_PATH    ".;@CMAKE_INSTALL_PREFIX@/@FALCON_MOD_DIR@"
+#endif
+
+//=====================================================
+// Runtime differential options
+//
+
+// Controls the tracing of garbage collectible items
+#cmakedefine  FALCON_TRACE_GC
+
+// Defined if the engine is statically compiled.
+#cmakedefine FALCON_STATIC_ENGINE
+
+// Defined if the feather modules are statically compiled in the Falcon system.
+#cmakedefine FALCON_STATIC_FEATHERS
+
+// Defined if the canonical modules are statically compiled in the Falcon system.
+#cmakedefine FALCON_STATIC_MODULES
+#cmakedefine FALCON_BUILD_CURL
+
+}
+
+#endif /* _FALCON_CONFIG_H_ */
+
+/* end of config.h */
+
+

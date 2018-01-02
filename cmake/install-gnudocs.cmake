@@ -1,20 +1,18 @@
-#################################################################
-#
+##############################################################################
 #   FALCON - The Falcon Programming Language
-#   FILE: /cmake/install-gnudocs.cmake
+#   FILE: version.cmake
 #
-#   Docs to be installed as part of the GNU-compliancy.
+#   Install GNU mandatory documentation files
 #   -------------------------------------------------------------------
 #   Author: Giancarlo Niccolai
-#   Begin: Mon, 01 Jan 2018 22:00:36 +0000
-#   Touch: Mon, 01 Jan 2018 22:00:36 +0000
+#   Begin : Tue, 02 Jan 2018 16:15:56 +0000
+#   Touch : Tue, 02 Jan 2018 18:31:24 +0000
 #
 #   -------------------------------------------------------------------
 #   (C) Copyright 2018 The Falcon Programming Language
-#
-#   Released under Apache 2.0 license.
-#   
-#################################################################
+#   Released under Apache 2.0 License.
+##############################################################################
+
 
 set( doc_files
       AUTHORS

@@ -1,19 +1,17 @@
-#################################################################
-#
-#   FALCON - The Falcon Programming Language.
+##############################################################################
+#   FALCON - The Falcon Programming Language
 #   FILE: test-bigendian.cmake
 #
-#   Check the endianity of the host system
+#   Check system endianity
 #   -------------------------------------------------------------------
 #   Author: Giancarlo Niccolai
-#   Begin: Wed, 02 Jul 2014 23:02:17 +0200
+#   Begin : Tue, 02 Jan 2018 16:15:56 +0000
+#   Touch : Tue, 02 Jan 2018 18:31:24 +0000
 #
 #   -------------------------------------------------------------------
-#   (C) Copyright 2014: the FALCON developers (see list in AUTHORS file)
-#
-#   See LICENSE file for licensing details.
-#   
-#################################################################
+#   (C) Copyright 2018 The Falcon Programming Language
+#   Released under Apache 2.0 License.
+##############################################################################
 
 include(TestBigEndian)
 

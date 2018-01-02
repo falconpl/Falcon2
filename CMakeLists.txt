@@ -9,13 +9,17 @@
 #   Touch: Mon, 01 Jan 2018 22:08:54 +0000
 #
 #   -------------------------------------------------------------------
-#   (C) Copyright $year The Falcon Programming Language
+#   (C) Copyright 2018 The Falcon Programming Language
 #   Released under Apache 2.0 License.
 #################################################################
 
 cmake_minimum_required(VERSION 2.6.2)
 project(Falcon)
 
+##################################################################
+# CMAKE bootstrap
+
+include(cmake/utils.cmake)
 include(cmake/options.cmake)
 include(cmake/version-info.cmake)
 
@@ -59,10 +63,8 @@ include( cmake/install-gnudocs.cmake )
 
 #########################################################
 # Subdirectories
-#
 
-#collect the include files in FALCON_HEADER
 add_subdirectory(include)
-add_subdirectory( test )
+#add_subdirectory( test )
 
 
