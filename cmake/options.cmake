@@ -128,4 +128,4 @@ else()
   Message( STATUS "(Specify LIB_SUFFIX to add a specific system-suffix for library install prefix)" ) 
 endif()
  
-
+set_default_opt(FALCON_INSTALL_TESTS "Install unit tests" OFF)

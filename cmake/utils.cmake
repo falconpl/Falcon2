@@ -6,13 +6,61 @@
 #   -------------------------------------------------------------------
 #   Author: Giancarlo Niccolai
 #   Begin : Tue, 02 Jan 2018 16:22:30 +0000
-#   Touch : Tue, 02 Jan 2018 18:31:24 +0000
+#   Touch : Tue, 09 Jan 2018 16:21:23 +0000
 #
 #   -------------------------------------------------------------------
 #   (C) Copyright 2018 The Falcon Programming Language
 #   Released under Apache 2.0 License.
 ##############################################################################
 
+#################################################################
+# falcon_add_fut_and_res - Adds a Falcon unit test.
+# * source: The source of the unit test
+# * other: Additional sources
+# * res: Additional resource files to be copied with the test
+
+function( falcon_add_fut_and_res source other res )
+   add_executable( "${source}"
+      ${source}.cpp
+      ${other})
+
+   set_target_properties( "${source}"
+         PROPERTIES
+         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${FALCON_BIN_DIR}/tests/")
+         
+   target_link_libraries(${source} falcon_fut)
+   add_test("${source}" "${CMAKE_BINARY_DIR}/${FALCON_BIN_DIR}/tests/${source}" )
+      
+   foreach(resource_file ${res} ) 
+      configure_file( "${resource_file}" "${CMAKE_BINARY_DIR}/${FALCON_BIN_DIR}/tests/${resource_file}"
+            COPYONLY)
+   endforeach()
+   
+   # We put it in bin/ under build, but in libexec in install
+   if(FALCON_INSTALL_TESTS)
+        install( ${source}
+                 DESTINATION "${FALCON_APP_DIR}/tests/"
+                 )
+                 
+        if("${res}")
+            install(
+               FILES "${res}"
+               DESTINATION "${FALCON_APP_DIR}/tests/"
+            )
+            
+      endif()
+   endif()
+     
+   
+endfunction()
+
+#################################################################
+# falcon_add_fut_and_res - Adds a Falcon unit test.
+# * source: The source of the unit test
+
+function( falcon_add_fut source )
+  falcon_add_fut_and_res(${source} "" "")
+endfunction()
 
 #################################################################
 # Adds a precompiled falcon scripts as a target.

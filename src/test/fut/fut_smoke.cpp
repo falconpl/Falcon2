@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 14:33:58 +0000
-  Touch : Tue, 09 Jan 2018 15:30:48 +0000
+  Touch : Tue, 09 Jan 2018 23:27:02 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -16,6 +16,7 @@
 #include <falcon/fut/fut.h>
 
 #include <iostream>
+#include <stdexcept>
 
 FALCON_TEST(FUT, smoke) {
    std::cout << "Hello world!" << std::endl;
