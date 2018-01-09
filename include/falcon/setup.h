@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 02 Jan 2018 16:51:09 +0000
-  Touch : Tue, 02 Jan 2018 18:31:24 +0000
+  Touch : Tue, 09 Jan 2018 15:26:02 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -22,9 +22,15 @@
 
 #ifdef FALCON_SYSTEM_WIN
 
+	#if defined(FALCON_ENGINE_EXPORTS)
+	   #define FALCON_API_ __declspec(dllexport)
+	#else
+	   #define FALCON_API_
+	#endif
+
    // Minimal specific.
    #if ! defined(_WIN32_WINNT)
-   #define _WIN32_WINNT 0x0501 //0x0403
+      #define _WIN32_WINNT 0x0501 //0x0403
    #endif
 
    #ifndef NOMINMAX
@@ -38,43 +44,11 @@
 
    /* Specifigs for MSVC */
    #ifdef _MSC_VER
-      #undef CDECL
-      #define CDECL __cdecl
-      #define FALCON_FUNC \
-         void CDECL
-
-		#ifndef FALCON_ENGINE_STATIC
-			#if defined(FALCON_ENGINE_EXPORTS)
-				#define FALCON_DYN_CLASS __declspec(dllexport)
-				#define FALCON_DYN_SYM __declspec(dllexport)
-				#define EXTERN_TEMPLATE
-
-            // Falcon export service is optional, but mandatory with engine exports.
-            #ifndef FALCON_EXPORT_SERVICE
-               #define FALCON_EXPORT_SERVICE
-            #endif
-			#else
-				#define FALCON_DYN_CLASS __declspec(dllimport)
-				#define FALCON_DYN_SYM __declspec(dllimport)
-				#define EXTERN_TEMPLATE export
-			#endif
-		#else
-			#define FALCON_DYN_CLASS
-			#define FALCON_DYN_SYM
-		#endif
-
       #ifdef FALCON_EXPORT_SERVICE
          #define FALCON_SERVICE __declspec(dllexport)
       #else
          #define FALCON_SERVICE __declspec(dllimport)
       #endif
-
-      #define FALCON_FUNC_DYN_SYM \
-		   FALCON_DYN_SYM void CDECL
-
-      #define FALCON_MODULE_TYPE \
-		   extern "C" __declspec(dllexport) ::Falcon::Module * CDECL
-
 
       #pragma warning (disable: 4786 )
       #pragma warning (disable: 4291 )
@@ -99,30 +73,6 @@
 
    /* Specifics for Gcc/Mingw */
    #ifdef __GNUC__
-	   #ifndef CDECL
-		#define CDECL
-	   #endif
-	   #define FALCON_FUNC \
-	      void
-
-	   #ifdef FALCON_ENGINE_EXPORTS
-			#define FALCON_DYN_CLASS __declspec(dllexport)
-			#define FALCON_DYN_SYM __declspec(dllexport)
-			#define EXTERN_TEMPLATE
-		#else
-			#define FALCON_DYN_CLASS __declspec(dllimport)
-			#define FALCON_DYN_SYM __declspec(dllimport)
-			#define EXTERN_TEMPLATE export
-		#endif
-
-      #ifdef FALCON_EXPORT_SERVICE
-         #define FALCON_SERVICE __declspec(dllexport)
-      #else
-         #define FALCON_SERVICE __declspec(dllimport)
-      #endif
-
-      #define FALCON_FUNC_DYN_SYM \
-		   FALCON_DYN_SYM void CDECL
 
 	   #define FALCON_MODULE_TYPE \
 	      extern "C" __declspec(dllexport) ::Falcon::Module *
@@ -143,17 +93,7 @@
 // Unix specific defines
 //
 #else
-   #define CDECL
-
-   #define FALCON_DYN_CLASS
-   #define FALCON_DYN_SYM
-   #define EXTERN_TEMPLATE
-   #define FALCON_SERVICE
-
-   #define FALCON_MODULE_TYPE \
-      extern "C" ::Falcon::Module *
-
-   #define FALCON_FUNC_DYN_SYM   FALCON_FUNC
+   #define FALCON_API_
 
    #define DIR_SEP_STR   "/"
    #define DIR_SEP_CHR   '/'
@@ -164,8 +104,6 @@
    #define UI64LIT(x) (x ## ULL)
 
 #endif
-
-}
 
 #endif /* _FALCON_SETUP_H_ */
 
