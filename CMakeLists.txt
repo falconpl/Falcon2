@@ -13,8 +13,12 @@
 #   Released under Apache 2.0 License.
 #################################################################
 
-cmake_minimum_required(VERSION 2.6.2)
+cmake_minimum_required(VERSION 3.0.1)
 project(Falcon)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 ##################################################################
 # CMAKE bootstrap
@@ -65,6 +69,8 @@ include( cmake/install-gnudocs.cmake )
 # Subdirectories
 
 add_subdirectory(include)
+add_subdirectory(src)
+
 #add_subdirectory( test )
 
 

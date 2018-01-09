@@ -34,3 +34,7 @@
 # Build area
 build*/
 
+# IDEs
+.cproject
+.project
+
