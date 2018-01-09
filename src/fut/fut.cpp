@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 13:55:57 +0000
-  Touch : Tue, 09 Jan 2018 15:30:48 +0000
+  Touch : Tue, 09 Jan 2018 16:21:23 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -112,7 +112,7 @@ int UnitTest::main(int argc, char* argv[])
 
 TestCase::TestCase(const char* name):
    m_name(name),
-   m_success(false),
+   m_success(true),
    m_complete(false)
 {
    UnitTest::singleton()->addTestCase(this);
@@ -139,7 +139,7 @@ void TestCase::beginTest()
 
 void TestCase::endTest()
 {
-   //TODO
+   m_complete = true;
 }
 
 }
