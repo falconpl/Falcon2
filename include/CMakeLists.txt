@@ -6,7 +6,7 @@
 #   -------------------------------------------------------------------
 #   Author: Giancarlo Niccolai
 #   Begin : Tue, 02 Jan 2018 15:51:57 +0000
-#   Touch : Tue, 02 Jan 2018 18:31:24 +0000
+#   Touch : Tue, 09 Jan 2018 23:27:02 +0000
 #
 #   -------------------------------------------------------------------
 #   (C) Copyright 2018 The Falcon Programming Language
@@ -24,7 +24,9 @@ configure_file(
   @ONLY 
 )
 
-file(GLOB falcon_files falcon/*.h)
+file(GLOB falcon_files 
+   falcon/*.h
+   falcon/fut/*.h)
 
 set(FALCON_HEADERS
    ${falcon_files}

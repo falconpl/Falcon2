@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 02 Jan 2018 16:51:09 +0000
-  Touch : Tue, 09 Jan 2018 15:26:02 +0000
+  Touch : Tue, 09 Jan 2018 23:27:02 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -83,10 +83,10 @@
 
    /* Other Windonws specific system defines */
 
-   #define DIR_SEP_STR   "\\"
-   #define DIR_SEP_CHR   '\\'
+   #define FALCON_DIR_SEP_STR   "\\"
+   #define FALCON_DIR_SEP_CHR   '\\'
    // paths are always indicated in falcon convention.
-   #define DEFAULT_TEMP_DIR "C:/TEMP"
+   #define FALCON_DEFAULT_TEMP_DIR "C:/TEMP"
    #define FALCON_SYS_EOL "\r\n"
 
 //=================================
@@ -95,9 +95,9 @@
 #else
    #define FALCON_API_
 
-   #define DIR_SEP_STR   "/"
-   #define DIR_SEP_CHR   '/'
-   #define DEFAULT_TEMP_DIR "/tmp"
+   #define FALCON_DIR_SEP_STR   "/"
+   #define FALCON_DIR_SEP_CHR   '/'
+   #define FALCON_DEFAULT_TEMP_DIR "/tmp"
    #define FALCON_SYS_EOL "\n"
    #define LLFMT "ll"
    #define I64LIT(x) (x ## LL)
