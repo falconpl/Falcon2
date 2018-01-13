@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 12:42:42 +0000
-  Touch : Tue, 09 Jan 2018 23:27:02 +0000
+  Touch : Sat, 13 Jan 2018 13:24:13 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -40,20 +40,20 @@ namespace test {
 
 
 
-#define FALCON_TEST_CHECK_LOGIC(_VARIABLE_,_CHECK_,_EXPECTED_) \
-		if(!( (_VARIABLE_) _CHECK_ (_EXPECTED_) )) { \
+#define FALCON_TEST_CHECK_LOGIC(_EXPECTED_,_CHECK_,_ACTUAL_) \
+		if(!( (_EXPECTED_) _CHECK_ (_ACTUAL_) )) { \
 		   std::ostringstream ss; \
-		   ss << (_VARIABLE_); \
-			this->checkFail( __FILE__, __LINE__, #_VARIABLE_ " " #_CHECK_ " " #_EXPECTED_, ss.str().c_str() ); \
+		   ss << (_ACTUAL_); \
+			this->checkFail( __FILE__, __LINE__, #_EXPECTED_ " " #_CHECK_ " " #_ACTUAL_, ss.str().c_str() ); \
 			return; \
 		}
 
-#define EXPECT_EQ( _VARIABLE_, _EXPECTED_) FALCON_TEST_CHECK_LOGIC(_VARIABLE_,==,_EXPECTED_)
-#define EXPECT_NE( _VARIABLE_, _EXPECTED_) FALCON_TEST_CHECK_LOGIC(_VARIABLE_,!=,_EXPECTED_)
-#define EXPECT_GT( _VARIABLE_, _EXPECTED_) FALCON_TEST_CHECK_LOGIC(_VARIABLE_,>,_EXPECTED_)
-#define EXPECT_GE( _VARIABLE_, _EXPECTED_) FALCON_TEST_CHECK_LOGIC(_VARIABLE_,>=,_EXPECTED_)
-#define EXPECT_LT( _VARIABLE_, _EXPECTED_) FALCON_TEST_CHECK_LOGIC(_VARIABLE_,<,_EXPECTED_)
-#define EXPECT_LE( _VARIABLE_, _EXPECTED_) FALCON_TEST_CHECK_LOGIC(_VARIABLE_,<=,_EXPECTED_)
+#define EXPECT_EQ( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(_EXPECTED_,==,_ACTUAL_)
+#define EXPECT_NE( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(_EXPECTED_,!=,_ACTUAL_)
+#define EXPECT_GT( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(_EXPECTED_,>,_ACTUAL_)
+#define EXPECT_GE( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(_EXPECTED_,>=,_ACTUAL_)
+#define EXPECT_LT( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(_EXPECTED_,<,_ACTUAL_)
+#define EXPECT_LE( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(_EXPECTED_,<=,_ACTUAL_)
 
 #define FAIL(_MESSAGE_) \
    this->checkFail( __FILE__, __LINE__, _MESSAGE_, "" );
