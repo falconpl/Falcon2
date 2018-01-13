@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:38:07 +0000
-  Touch : Tue, 09 Jan 2018 23:27:02 +0000
+  Touch : Sat, 13 Jan 2018 21:02:34 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -21,6 +21,8 @@
 namespace Falcon {
 namespace test {
 
+class UnitTest;
+
 /** Single test case.
  *
  * The class is meant to be statically declared at program level or main scope,
@@ -30,11 +32,6 @@ namespace test {
 class FALCON_API_ TestCase
 {
 public:
-   /** Creates a unit test.
-    * @name A unit test name in format "Component::topic"
-    * @note Will register with the UnitTest singleton upon creation.
-    */
-   TestCase(const char* name);
    virtual ~TestCase();
 
    typedef enum {
@@ -56,8 +53,8 @@ public:
    int failLine() const;
    void checkFail(const char* fname, int line, const char* expected, const char* actual);
 
-   virtual void setup();
-   virtual void teardown();
+   virtual void init();
+   virtual void destroy();
    void beginTest();
    void endTest();
 
@@ -69,7 +66,23 @@ public:
    /* Must be specialized in the final test */
    virtual void test() = 0;
 
+   /** Named with capital letter to match GTEST fixtures */
+   virtual void SetUp();
+   /** Named with capital letter to match GTEST fixtures */
+   virtual void TearDown();
+
+
+protected:
+/** Creates a unit test.
+ * @name A unit test name in format "Component::topic"
+ * @note Will register with the UnitTest singleton upon creation.
+ */
+   TestCase();
+
 private:
+   void setName(const char* name);
+
+   friend class UnitTest;
    class Private;
    Private *p;
 

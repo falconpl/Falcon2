@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:38:29 +0000
-  Touch : Tue, 09 Jan 2018 23:27:02 +0000
+  Touch : Sat, 13 Jan 2018 21:02:34 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -56,17 +56,19 @@ UnitTest::~UnitTest()
    delete p;
 }
 
-void UnitTest::addTestCase(TestCase* tcase)
+TestCase* UnitTest::addTestCase(const char* testName, TestCase* tcase)
 {
+   tcase->setName(testName);
    p->tests.push_back(tcase);
    p->testsByName.insert(std::make_pair(tcase->name(), tcase));
+   return tcase;
 }
 
-void UnitTest::setup()
+void UnitTest::init()
 {
    p->status = 0;
    for(auto testIter: p->tests ) {
-      testIter->setup();
+      testIter->init();
    }
 }
 
@@ -173,10 +175,10 @@ void UnitTest::report()
 }
 
 
-void UnitTest::tearDown()
+void UnitTest::destroy()
 {
    for(auto testIter: p->tests ) {
-      testIter->teardown();
+      testIter->destroy();
    }
    p->tests.clear();
    p->testsByName.clear();
@@ -195,7 +197,7 @@ UnitTest* UnitTest::singleton(){
 
 int UnitTest::performUnitTests()
 {
-   setup();
+   init();
    runAllTests();
    report();
    return p->status;
@@ -204,7 +206,7 @@ int UnitTest::performUnitTests()
 
 int UnitTest::performTest(const char* name)
 {
-   setup();
+   init();
 
    auto titer = p->testsByName.find(name);
    if(titer == p->testsByName.end()) {
@@ -244,7 +246,7 @@ int UnitTest::main(int argc, char* argv[])
    parseParams(argc, argv);
    int status = performUnitTests();
 
-   tearDown();
+   destroy();
    delete this;
    return status;
 }

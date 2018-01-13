@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:39:09 +0000
-  Touch : Tue, 09 Jan 2018 23:27:02 +0000
+  Touch : Sat, 13 Jan 2018 21:02:34 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -42,12 +42,11 @@ public:
    std::string failFile;
 };
 
-TestCase::TestCase(const char* name):
+TestCase::TestCase():
    p(new Private)
 {
-   p->name = name;
+   p->name = "Undefined";
    p->status = NONE;
-   UnitTest::singleton()->addTestCase(this);
 }
 
 TestCase::~TestCase()
@@ -55,8 +54,14 @@ TestCase::~TestCase()
    delete p;
 }
 
+
 const char* TestCase::name() const {
    return p->name;
+}
+
+
+void TestCase::setName(const char* n) {
+   p->name = n;
 }
 
 void TestCase::status(t_status s)
@@ -124,15 +129,27 @@ void TestCase::checkFail(const char* fname, int line, const char* expected, cons
 }
 
 
-void TestCase::setup()
+void TestCase::SetUp()
+{
+   // To be reimplemented by fixture if needed
+}
+
+void TestCase::TearDown()
+{
+   // To be reimplemented by fixture if needed
+}
+
+
+void TestCase::init()
 {
    p->status = NONE;
 }
 
-void TestCase::teardown()
+void TestCase::destroy()
 {
    //TODO
 }
+
 
 void TestCase::beginTest()
 {
@@ -156,14 +173,16 @@ void TestCase::endTest()
 }
 
 void TestCase::run() {
+
    try {
       p->status = NONE;
-
+      SetUp();
       test();
 
       if(p->status == NONE) {
          p->status = p->errCapture.str().empty() ? SUCCESS : OUT_ON_ERROR_STREAM;
       }
+      TearDown();
    }
    catch(std::exception& e) {
       p->status = ERROR;
@@ -178,6 +197,4 @@ void TestCase::run() {
 }
 }
 
-
 /* end of testcase.cpp */
-

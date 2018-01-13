@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:37:43 +0000
-  Touch : Tue, 09 Jan 2018 23:27:02 +0000
+  Touch : Sat, 13 Jan 2018 21:02:34 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -48,7 +48,7 @@ public:
    static UnitTest* singleton();
 
    /** Used by the unit tests to add themselves */
-   void addTestCase(TestCase* tcase);
+   TestCase* addTestCase(const char* testName, TestCase* tcase);
 
    /**
     * Parse the unit test parameters and executes all the tests.
@@ -66,10 +66,10 @@ private:
    class Private;
    Private* p;
 
-   void setup();
+   void init();
    void runAllTests();
    void report();
-   void tearDown();
+   void destroy();
    void writeTestName(int count, const char* tname, const char* result);
    void beginTest(int count, TestCase* tc);
    void endTest(int count, TestCase* tc);
