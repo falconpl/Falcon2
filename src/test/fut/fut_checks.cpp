@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 20:48:25 +0000
-  Touch : Tue, 09 Jan 2018 23:27:02 +0000
+  Touch : Sat, 13 Jan 2018 21:27:35 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -51,6 +51,11 @@ FALCON_TEST(EXPECT, ThrowPositive)
       value =+ 1;
       std::cout << value <<"\n";
    });
+}
+
+TEST(EXPECT, StringEquality)
+{
+   EXPECT_SEQ("A string", "A string");
 }
 
 

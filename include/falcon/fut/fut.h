@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 12:42:42 +0000
-  Touch : Sat, 13 Jan 2018 21:02:33 +0000
+  Touch : Sat, 13 Jan 2018 21:27:35 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -20,6 +20,7 @@
 #include <falcon/fut/testcase.h>
 #include <falcon/fut/unittest.h>
 #include <sstream>
+#include <string>
 #include <stdexcept>
 
 
@@ -27,7 +28,7 @@
 #define _FALCON_TEST_DECLARE_CLASS_(_CLASSNAME_,_PARENTNAME_,_TNAME_) \
    class _CLASSNAME_: public _PARENTNAME_ { \
       public:\
-      _CLASSNAME_( ):TestCase(){}\
+      _CLASSNAME_( ):_PARENTNAME_(){}\
       virtual ~_CLASSNAME_() {}\
       virtual void test(); \
       private:\
@@ -65,6 +66,7 @@
 #define EXPECT_GE( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(_EXPECTED_,>=,_ACTUAL_)
 #define EXPECT_LT( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(_EXPECTED_,<,_ACTUAL_)
 #define EXPECT_LE( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(_EXPECTED_,<=,_ACTUAL_)
+#define EXPECT_SEQ( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(std::string(_EXPECTED_),==,std::string(_ACTUAL_))
 
 #define FAIL(_MESSAGE_) \
    this->checkFail( __FILE__, __LINE__, _MESSAGE_, "" );
