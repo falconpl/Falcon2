@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 20:48:25 +0000
-  Touch : Sat, 13 Jan 2018 21:27:35 +0000
+  Touch : Sat, 13 Jan 2018 21:50:53 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -58,8 +58,6 @@ TEST(EXPECT, StringEquality)
    EXPECT_SEQ("A string", "A string");
 }
 
-
-FALCON_TEST_MAIN
 
 /* end of fut_checks.cpp */
 

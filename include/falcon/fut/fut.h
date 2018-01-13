@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 12:42:42 +0000
-  Touch : Sat, 13 Jan 2018 21:27:35 +0000
+  Touch : Sat, 13 Jan 2018 21:50:53 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -24,6 +24,8 @@
 #include <stdexcept>
 
 
+#define FALCON_TEST_CLASS_NAME(_COMPONENT_, _NAME_) \
+      TestCase_##_COMPONENT_##_c_##_NAME_
 
 #define _FALCON_TEST_DECLARE_CLASS_(_CLASSNAME_,_PARENTNAME_,_TNAME_) \
    class _CLASSNAME_: public _PARENTNAME_ { \
@@ -31,7 +33,6 @@
       _CLASSNAME_( ):_PARENTNAME_(){}\
       virtual ~_CLASSNAME_() {}\
       virtual void test(); \
-      private:\
       static _CLASSNAME_* _instance_;\
       };\
       _CLASSNAME_* _CLASSNAME_::_instance_ = \
@@ -40,12 +41,10 @@
       void _CLASSNAME_::test()
 
 #define FALCON_TEST(_COMPONENT_, _NAME_) \
-    _FALCON_TEST_DECLARE_CLASS_(TestCase_##_COMPONENT_##_c_##_NAME_,::Falcon::test::TestCase, #_COMPONENT_ "::" #_NAME_  )
-
+    _FALCON_TEST_DECLARE_CLASS_(FALCON_TEST_CLASS_NAME(_COMPONENT_,_NAME_),::Falcon::test::TestCase, #_COMPONENT_ "::" #_NAME_  )
 
 #define FALCON_TEST_F(_COMPONENT_, _NAME_) \
-    _FALCON_TEST_DECLARE_CLASS_(TestCase_##_COMPONENT_##_c_##_NAME_,_COMPONENT_, #_COMPONENT_ "::" #_NAME_  )
-
+    _FALCON_TEST_DECLARE_CLASS_(FALCON_TEST_CLASS_NAME(_COMPONENT_,_NAME_),_COMPONENT_, #_COMPONENT_ "::" #_NAME_  )
 
 #ifndef FALCON_TEST_DONT_DEFINE_TEST
 #define TEST   FALCON_TEST

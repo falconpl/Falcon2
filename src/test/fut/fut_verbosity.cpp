@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 22:12:28 +0000
-  Touch : Tue, 09 Jan 2018 23:27:02 +0000
+  Touch : Sat, 13 Jan 2018 21:50:53 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -134,6 +134,7 @@ int test( int id )
 }
 
 }
+
 int main(int argc, char* argv[])
 {
    Falcon::test::UnitTest* ut = Falcon::test::UnitTest::singleton();
