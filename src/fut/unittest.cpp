@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:38:29 +0000
-  Touch : Sun, 14 Jan 2018 20:24:55 +0000
+  Touch : Sun, 14 Jan 2018 20:35:13 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -138,7 +138,7 @@ void UnitTest::endTest(int count, TestCase* tc)
 void UnitTest::writeTestName(int count, const char* tname, const char* result)
 {
    std::ostringstream sname;
-   sname << "[Case " << count << ": " << tname;
+   sname << "[" << count << ": " << tname;
    int tnamelen = p->screenWidth - sname.str().length();
    while(tnamelen > 0) {
       sname << " ";
@@ -281,6 +281,10 @@ int UnitTest::parseParams(int argc, char* argv[])
          p->testsToPerofm.push_back(iter->second);
          continue;
       }
+      else if(opt == "-h") {
+         usage();
+         return 1;
+      }
 
       // If we're here, we have invalid options
       std::cerr << "Invalid options\n";
@@ -293,7 +297,12 @@ int UnitTest::parseParams(int argc, char* argv[])
 
 
 void UnitTest::usage() {
-   std::cout << "TODO\n";
+   std::cout << "UnitTest command line options:\n\n"
+      << "\t-h\tThis help\n"
+      << "\t-q-\tRun quietly (suppress all output)\n"
+      << "\t-t NAME\tRun given test (may be used multiple times)\n"
+      << "\t-v N\tSets verbosity level to N (" << SILENT << "=silent, "
+      << REPORT_STDOUT <<"=all)\n\n";
 }
 
 
