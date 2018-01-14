@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:37:43 +0000
-  Touch : Sat, 13 Jan 2018 21:02:34 +0000
+  Touch : Sun, 14 Jan 2018 20:24:55 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -57,10 +57,11 @@ public:
     */
    int main(int argc, char* argv[]);
 
-   void parseParams(int argc, char* argv[]);
+   int parseParams(int argc, char* argv[]);
    int performUnitTests();
    int performTest(const char* name);
    void setVerbosity( t_verbosity vb );
+   void usage();
 
 private:
    class Private;

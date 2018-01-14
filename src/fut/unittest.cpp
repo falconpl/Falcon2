@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:38:29 +0000
-  Touch : Sat, 13 Jan 2018 21:02:34 +0000
+  Touch : Sun, 14 Jan 2018 20:24:55 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -20,6 +20,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 #include <iostream>
 #include <sstream>
@@ -38,12 +39,13 @@ public:
 
    std::vector<TestCase* > tests;
    std::map< std::string, TestCase*> testsByName;
+   std::vector<TestCase* > testsToPerofm;
+
    int status;
    int screenWidth;
 
    bool opt_erroutIsFail;
    UnitTest::t_verbosity verbosity;
-
 };
 
 UnitTest::UnitTest():
@@ -75,7 +77,7 @@ void UnitTest::init()
 void UnitTest::runAllTests()
 {
    int count = 0;
-   for(auto tcase: p->tests ) {
+   for(auto tcase: p->testsToPerofm ) {
       beginTest(++count, tcase);
       tcase->run();
       endTest(count, tcase);
@@ -158,17 +160,25 @@ bool UnitTest::hasPassed(TestCase* tcase) const
 void UnitTest::report()
 {
    if(p->verbosity > SILENT) {
-      std::cout << "\n======================================================================\n";
       if (p->status != 0) {
          bool first = true;
          for(auto tcase: p->tests ) {
             if (!hasPassed(tcase))
             {
-               std::cout << (first ? "Failed cases: " : ", ") << tcase->name();
-               first = false;
+               if(first) {
+                  std::cout << "\n======================================================================"
+                     << "\nFailed cases: ";
+                  first = false;
+               }
+               else {
+                  std::cout << ", ";
+               }
+               std::cout << tcase->name();
             }
          }
-         std::cout << "\n======================================================================\n";
+         if(!first) {
+            std::cout << "\n======================================================================\n";
+         }
       }
       std::cout << "Unit Test " <<( p->status == 0 ? "Passed\n" : "FAILED \n");
    }
@@ -198,6 +208,11 @@ UnitTest* UnitTest::singleton(){
 int UnitTest::performUnitTests()
 {
    init();
+   // fill the test to perform with all the tests, if none was explicitly given.
+   auto& testsToPerform = p->testsToPerofm;
+   if(testsToPerform.empty()) {
+      testsToPerform = p->tests;
+   }
    runAllTests();
    report();
    return p->status;
@@ -236,17 +251,60 @@ void UnitTest::setVerbosity( t_verbosity vb )
 }
 
 
-void UnitTest::parseParams(int argc, char* argv[])
+int UnitTest::parseParams(int argc, char* argv[])
 {
+   for(int i = 0; i < argc; ++i)
+   {
+      std::string opt = argv[i];
+
+      if(opt == "-q") {
+         setVerbosity(SILENT);
+         continue;
+      }
+      else if(opt == "-v" && ++i < argc) {
+         std::istringstream is(argv[i]);
+         int level;
+         is >> level;
+         if(level >= SILENT && level <= REPORT_STDOUT) {
+            setVerbosity(static_cast<t_verbosity>(level));
+            continue;
+         }
+      }
+      else if (opt == "-t" && ++i < argc) {
+         std::string testName = argv[i];
+         auto iter = p->testsByName.find(testName);
+         if(iter == p->testsByName.end()) {
+            std::cout << "Unknown test case " << testName << "\n";
+            return 1;
+         }
+
+         p->testsToPerofm.push_back(iter->second);
+         continue;
+      }
+
+      // If we're here, we have invalid options
+      std::cerr << "Invalid options\n";
+      usage();
+      return 1;
+   }
+
+   return 0;
+}
+
+
+void UnitTest::usage() {
+   std::cout << "TODO\n";
 }
 
 
 int UnitTest::main(int argc, char* argv[])
 {
-   parseParams(argc, argv);
-   int status = performUnitTests();
+   int status = parseParams(argc, argv);
+   if(!status) {
+      status = performUnitTests();
+      destroy();
+   }
 
-   destroy();
    delete this;
    return status;
 }

@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 12:42:42 +0000
-  Touch : Sat, 13 Jan 2018 21:50:53 +0000
+  Touch : Sun, 14 Jan 2018 20:24:55 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -102,7 +102,7 @@
 
 #define FALCON_TEST_MAIN      \
       int main(int argc, char* argv[]) { \
-         return ::Falcon::test::UnitTest::singleton()->main(argc, argv); \
+         return ::Falcon::test::UnitTest::singleton()->main(argc-1, argv+1); \
       }
 
 
