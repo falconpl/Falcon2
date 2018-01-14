@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:38:07 +0000
-  Touch : Sat, 13 Jan 2018 21:02:34 +0000
+  Touch : Sun, 14 Jan 2018 22:41:49 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -43,7 +43,6 @@ public:
    }
    t_status;
 
-   const char* name() const;
    void status(t_status s);
    t_status status() const;
    const char* capturedOut() const;
@@ -71,16 +70,16 @@ public:
    /** Named with capital letter to match GTEST fixtures */
    virtual void TearDown();
 
+   const char* componentName() const;
+   const char* caseName() const;
+   const char* fullName() const;
+
 
 protected:
-/** Creates a unit test.
- * @name A unit test name in format "Component::topic"
- * @note Will register with the UnitTest singleton upon creation.
- */
    TestCase();
 
 private:
-   void setName(const char* name);
+   void setName(const char* component, const char* tname);
 
    friend class UnitTest;
    class Private;

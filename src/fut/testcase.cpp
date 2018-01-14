@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:39:09 +0000
-  Touch : Sat, 13 Jan 2018 21:02:34 +0000
+  Touch : Sun, 14 Jan 2018 22:41:49 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -27,7 +27,10 @@ namespace test{
 class TestCase::Private
 {
 public:
-   const char* name;
+   std::string name;
+   std::string componentName;
+   std::string caseName;
+
    TestCase::t_status status;
    std::ostringstream outCapture;
    std::ostringstream errCapture;
@@ -55,13 +58,25 @@ TestCase::~TestCase()
 }
 
 
-const char* TestCase::name() const {
-   return p->name;
+const char* TestCase::fullName() const {
+   return p->name.c_str();
 }
 
 
-void TestCase::setName(const char* n) {
-   p->name = n;
+const char* TestCase::caseName() const {
+   return p->caseName.c_str();
+}
+
+
+const char* TestCase::componentName() const {
+   return p->componentName.c_str();
+}
+
+
+void TestCase::setName(const char* component, const char* caseName) {
+   p->componentName = component;
+   p->caseName = caseName;
+   p->name = p->componentName + "::" + p->caseName;
 }
 
 void TestCase::status(t_status s)

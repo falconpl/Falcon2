@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:38:29 +0000
-  Touch : Sun, 14 Jan 2018 22:17:37 +0000
+  Touch : Sun, 14 Jan 2018 22:41:49 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -40,11 +40,13 @@ public:
 
    std::vector<TestCase* > tests;
    std::map< std::string, TestCase*> testsByName;
+   std::multimap< std::string, TestCase*> testsByCategory;
    std::vector<TestCase* > testsToPerofm;
    std::string xmlReport;
 
    int status;
    int screenWidth;
+   int failedCount;
 
    bool opt_erroutIsFail;
    UnitTest::t_verbosity verbosity;
@@ -60,17 +62,19 @@ UnitTest::~UnitTest()
    delete p;
 }
 
-TestCase* UnitTest::addTestCase(const char* testName, TestCase* tcase)
+TestCase* UnitTest::addTestCase(const char* component, const char* caseName, TestCase* tcase)
 {
-   tcase->setName(testName);
+   tcase->setName(component, caseName);
    p->tests.push_back(tcase);
-   p->testsByName.insert(std::make_pair(tcase->name(), tcase));
+   p->testsByName.insert(std::make_pair(tcase->fullName(), tcase));
+   p->testsByCategory.insert(std::make_pair(tcase->componentName(), tcase));
    return tcase;
 }
 
 void UnitTest::init()
 {
    p->status = 0;
+   p->failedCount = 0;
    for(auto testIter: p->tests ) {
       testIter->init();
    }
@@ -87,6 +91,7 @@ void UnitTest::runAllTests()
       if (!hasPassed(tcase))
       {
          p->status = -1;
+         p->failedCount++;
       }
    }
 }
@@ -94,7 +99,7 @@ void UnitTest::runAllTests()
 void UnitTest::beginTest(int count, TestCase* tc)
 {
    if(p->verbosity >= REPORT_BEGIN) {
-      writeTestName(count, tc->name(), "GO");
+      writeTestName(count, tc->fullName(), "GO");
    }
 
    tc->beginTest();
@@ -107,7 +112,7 @@ void UnitTest::endTest(int count, TestCase* tc)
    if(tc->capturedOut()[0]
       && (p->verbosity >= REPORT_STDOUT || (p->verbosity > SILENT && !hasPassed(tc)))) {
       std::cout << "\n======================================================================\n";
-      std::cout << "STDOUT " << tc->name() << "\n";
+      std::cout << "STDOUT " << tc->fullName() << "\n";
       std::cout << "======================================================================\n";
       std::cout << tc->capturedOut() << "\n";
    }
@@ -115,25 +120,25 @@ void UnitTest::endTest(int count, TestCase* tc)
    if(tc->capturedErr()[0]
       && (p->verbosity >= REPORT_STDERR || (p->verbosity > SILENT && !hasPassed(tc)))) {
       std::cout << "\n======================================================================\n";
-      std::cout << "STDERR " << tc->name() << "\n";
+      std::cout << "STDERR " << tc->fullName() << "\n";
       std::cout << "======================================================================\n";
       std::cout << tc->capturedErr() << "\n";
    }
 
    if(p->verbosity > SILENT && tc->status() == TestCase::ERROR) {
       std::cout << "\n======================================================================\n";
-      std::cout << "Uncaught error in Case " << count << ": " << tc->name() << "\n";
+      std::cout << "Uncaught error in Case " << count << ": " << tc->fullName() << "\n";
       std::cout << tc->failDesc() << "\n";
    }
    else if(p->verbosity >= REPORT_FAILURE && tc->status() == TestCase::FAIL)
    {
       std::cout << "\n======================================================================\n";
-      std::cout << "Failure in case " << count << ": " << tc->name() << " at "
+      std::cout << "Failure in case " << count << ": " << tc->fullName() << " at "
                 << tc->failFile() << ": " << tc->failLine() << "\n";
       std::cout << tc->failDesc() << "\n";
    }
    else if(p->verbosity >= REPORT_STATUS) {
-      writeTestName(count, tc->name(), hasPassed(tc) ? "OK" : "FAIL");
+      writeTestName(count, tc->fullName(), hasPassed(tc) ? "OK" : "FAIL");
    }
 }
 
@@ -175,7 +180,7 @@ void UnitTest::report()
                else {
                   std::cout << ", ";
                }
-               std::cout << tcase->name();
+               std::cout << tcase->fullName();
             }
          }
          if(!first) {

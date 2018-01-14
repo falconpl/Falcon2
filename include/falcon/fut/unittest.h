@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:37:43 +0000
-  Touch : Sun, 14 Jan 2018 22:17:37 +0000
+  Touch : Sun, 14 Jan 2018 22:41:49 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -48,7 +48,7 @@ public:
    static UnitTest* singleton();
 
    /** Used by the unit tests to add themselves */
-   TestCase* addTestCase(const char* testName, TestCase* tcase);
+   TestCase* addTestCase(const char* component, const char* caseName, TestCase* tcase);
 
    /**
     * Parse the unit test parameters and executes all the tests.
