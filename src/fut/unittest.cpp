@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:38:29 +0000
-  Touch : Sun, 14 Jan 2018 20:35:13 +0000
+  Touch : Sun, 14 Jan 2018 22:17:37 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -23,6 +23,7 @@
 #include <algorithm>
 
 #include <iostream>
+#include <fstream>
 #include <sstream>
 
 namespace Falcon {
@@ -40,6 +41,7 @@ public:
    std::vector<TestCase* > tests;
    std::map< std::string, TestCase*> testsByName;
    std::vector<TestCase* > testsToPerofm;
+   std::string xmlReport;
 
    int status;
    int screenWidth;
@@ -215,6 +217,9 @@ int UnitTest::performUnitTests()
    }
    runAllTests();
    report();
+   if(!p->xmlReport.empty()) {
+      saveToXML();
+   }
    return p->status;
 }
 
@@ -281,6 +286,10 @@ int UnitTest::parseParams(int argc, char* argv[])
          p->testsToPerofm.push_back(iter->second);
          continue;
       }
+      else if (opt == "-o" && ++i < argc) {
+         p->xmlReport = argv[i];
+         continue;
+      }
       else if(opt == "-h") {
          usage();
          return 1;
@@ -299,10 +308,37 @@ int UnitTest::parseParams(int argc, char* argv[])
 void UnitTest::usage() {
    std::cout << "UnitTest command line options:\n\n"
       << "\t-h\tThis help\n"
-      << "\t-q-\tRun quietly (suppress all output)\n"
+      << "\t-q\tRun quietly (suppress all output)\n"
+      << "\t-o FILE\tSave XML report to this file\n"
       << "\t-t NAME\tRun given test (may be used multiple times)\n"
       << "\t-v N\tSets verbosity level to N (" << SILENT << "=silent, "
       << REPORT_STDOUT <<"=all)\n\n";
+}
+
+
+void UnitTest::saveToXML()
+{
+   std::ofstream fout(p->xmlReport);
+   if(! fout) {
+      std::cerr << "Cannot save XML report to " << p->xmlReport;
+      return;
+   }
+
+   fout << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
+   fout << "<testsuites id=\"\" name=\"\" tests=\"\" failures=\"\" time=\"\">\n";
+   fout << "<testsuite id=\"\" name=\"\" tests=\"\" failures=\"\" time=\"\">\n";
+
+   fout << "<testcase id=\"\" name=\"\" time=\"\">\n";
+
+   fout << "<failure message=\"\" type=\"\">\n";
+   fout << "Category: COBOL Code Review – Naming Conventions\n"
+        << "File: /project/PROGRAM.cbl\n"
+        << "Line: 2\n";
+   fout << "</failure>\n";
+
+   fout << "</testcase>\n";
+   fout << "</testsuite>\n";
+   fout << "</testsuites>\n";
 }
 
 
