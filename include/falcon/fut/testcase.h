@@ -19,7 +19,7 @@
 #include <falcon/setup.h>
 
 namespace Falcon {
-namespace test {
+namespace testing {
 
 class UnitTest;
 

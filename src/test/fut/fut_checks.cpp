@@ -58,6 +58,7 @@ TEST(EXPECT, StringEquality)
    EXPECT_SEQ("A string", "A string");
 }
 
+FALCON_TEST_MAIN
 
 /* end of fut_checks.cpp */
 

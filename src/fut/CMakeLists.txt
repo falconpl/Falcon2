@@ -14,6 +14,7 @@
 ##############################################################################
 
 file(GLOB SOURCES *.cpp)
+add_definitions(-DFALCON_ENGINE_EXPORTS)
 
 if(FALCON_SYSTEM_WIN)
    set(SYS_SOURCES

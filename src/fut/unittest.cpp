@@ -28,7 +28,7 @@
 #include <sstream>
 
 namespace Falcon {
-namespace test{
+namespace testing{
 
 namespace {
 class Component {

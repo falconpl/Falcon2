@@ -36,12 +36,12 @@
       static _CLASSNAME_* _instance_;\
       };\
       _CLASSNAME_* _CLASSNAME_::_instance_ = \
-            static_cast<_CLASSNAME_*>(::Falcon::test::UnitTest::singleton()->\
+            static_cast<_CLASSNAME_*>(::Falcon::testing::UnitTest::singleton()->\
                addTestCase(_COMPONENT_,_CASE_,new _CLASSNAME_));\
       void _CLASSNAME_::test()
 
 #define FALCON_TEST(_COMPONENT_, _NAME_) \
-    _FALCON_TEST_DECLARE_CLASS_(FALCON_TEST_CLASS_NAME(_COMPONENT_,_NAME_),::Falcon::test::TestCase,#_COMPONENT_,#_NAME_)
+    _FALCON_TEST_DECLARE_CLASS_(FALCON_TEST_CLASS_NAME(_COMPONENT_,_NAME_),Falcon::testing::TestCase,#_COMPONENT_,#_NAME_)
 
 #define FALCON_TEST_F(_COMPONENT_, _NAME_) \
     _FALCON_TEST_DECLARE_CLASS_(FALCON_TEST_CLASS_NAME(_COMPONENT_,_NAME_),_COMPONENT_,#_COMPONENT_,#_NAME_)
@@ -102,7 +102,7 @@
 
 #define FALCON_TEST_MAIN      \
       int main(int argc, char* argv[]) { \
-         return ::Falcon::test::UnitTest::singleton()->main(argc-1, argv+1); \
+         return ::Falcon::testing::UnitTest::singleton()->main(argc-1, argv+1); \
       }
 
 

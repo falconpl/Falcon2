@@ -25,7 +25,7 @@
 	#if defined(FALCON_ENGINE_EXPORTS)
 	   #define FALCON_API_ __declspec(dllexport)
 	#else
-	   #define FALCON_API_
+	   #define FALCON_API_ __declspec(dllimport)
 	#endif
 
    // Minimal specific.

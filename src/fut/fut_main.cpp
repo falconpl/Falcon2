@@ -16,11 +16,12 @@
 #include <falcon/fut/unittest.h>
 #include <cassert>
 
-int main(int argc, char* argv[]) {
-   assert(argc > 0);
-   return ::Falcon::test::UnitTest::singleton()->main(argc-1, argv+1);
+extern "C" {
+	int main(int argc, char* argv[]) {
+		assert(argc > 0);
+		return ::Falcon::testing::UnitTest::singleton()->main(argc - 1, argv + 1);
+	}
 }
-
 
 /* end of fut_main.cpp */
 

@@ -18,7 +18,7 @@
 
 #include <falcon/setup.h>
 namespace Falcon {
-namespace test {
+namespace testing {
 void markTime(int64& currentMillisecs);
 }
 }

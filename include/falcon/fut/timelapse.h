@@ -20,7 +20,7 @@
 #include <falcon/fut/marktime.h>
 
 namespace Falcon {
-namespace test{
+namespace testing{
 
 class TimeLapse{
 public:
