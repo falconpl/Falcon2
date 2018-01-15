@@ -58,14 +58,14 @@
       #pragma warning (disable: 4355)
       #pragma warning (disable: 4996)
 
-   	#if _MSC_VER <= 1400
+   #if _MSC_VER <= 1400
    		#ifndef _WCHAR_T_DEFINED
    			typedef unsigned short wchar_t;
    		#endif
-   	#endif
+		#define snprintf _snprintf
+   #endif
 
       #define atoll _atoi64
-      #define snprintf _snprintf
       #define LLFMT    "I64"
       #define I64LIT(x) (x ## i64)
       #define UI64LIT(x) (x ## ui64)

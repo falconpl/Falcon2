@@ -15,7 +15,7 @@
 
 file(GLOB SOURCES *.cpp)
 
-if(FALCON_SYS_WIN)
+if(FALCON_SYSTEM_WIN)
    set(SYS_SOURCES
       marktime-win.c++ )
 else()

@@ -97,6 +97,7 @@ const char* TestCase::statusDesc() const {
    case ERROR: return "EXCEMPTION";
    case OUT_ON_ERROR_STREAM: return "STREAM-ERROR";
    }
+   return "Unknown";
 }
 
 void TestCase::fail(const char* file, int line, const char* reason)
