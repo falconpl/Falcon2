@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:37:43 +0000
-  Touch : Sun, 14 Jan 2018 22:41:49 +0000
+  Touch : Mon, 15 Jan 2018 00:20:14 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -62,6 +62,8 @@ public:
    int performTest(const char* name);
    void setVerbosity( t_verbosity vb );
    void usage();
+
+   int64 elapsedTime() const;
 
 private:
    class Private;

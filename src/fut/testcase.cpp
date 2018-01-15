@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:39:09 +0000
-  Touch : Sun, 14 Jan 2018 22:41:49 +0000
+  Touch : Mon, 15 Jan 2018 00:20:14 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -15,6 +15,7 @@
 
 #include <falcon/fut/testcase.h>
 #include <falcon/fut/unittest.h>
+#include <falcon/fut/timelapse.h>
 
 #include <string>
 #include <iostream>
@@ -43,7 +44,10 @@ public:
    std::string failDesc;
    int failLine;
    std::string failFile;
+
+   TimeLapse lapse;
 };
+
 
 TestCase::TestCase():
    p(new Private)
@@ -84,6 +88,16 @@ void TestCase::status(t_status s)
    p->status = s;
 }
 
+
+const char* TestCase::statusDesc() const {
+   switch(p->status) {
+   case NONE: return "NONE";
+   case SUCCESS: return "SUCCESS";
+   case FAIL: return "FAIL";
+   case ERROR: return "EXCEMPTION";
+   case OUT_ON_ERROR_STREAM: return "STREAM-ERROR";
+   }
+}
 
 void TestCase::fail(const char* file, int line, const char* reason)
 {
@@ -187,12 +201,15 @@ void TestCase::endTest()
    p->errCaptureStr = p->errCapture.str();
 }
 
-void TestCase::run() {
-
+void TestCase::run()
+{
    try {
       p->status = NONE;
       SetUp();
+
+      p->lapse.markBegin();
       test();
+      p->lapse.markEnd();
 
       if(p->status == NONE) {
          p->status = p->errCapture.str().empty() ? SUCCESS : OUT_ON_ERROR_STREAM;
@@ -200,13 +217,20 @@ void TestCase::run() {
       TearDown();
    }
    catch(std::exception& e) {
+      p->lapse.markEnd();
       p->status = ERROR;
       p->failDesc = e.what();
    }
    catch(...) {
+      p->lapse.markEnd();
       p->status = ERROR;
       p->failDesc = "Unknown error caught by Falcon::test framework";
    }
+}
+
+int64 TestCase::elapsedTime() const
+{
+   return p->lapse.elapsed();
 }
 
 }

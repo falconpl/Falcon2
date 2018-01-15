@@ -27,6 +27,7 @@ enable_testing()
 include(cmake/utils.cmake)
 include(cmake/options.cmake)
 include(cmake/version-info.cmake)
+include(cmake/system.cmake)
 
 ##################################################################
 # System specific

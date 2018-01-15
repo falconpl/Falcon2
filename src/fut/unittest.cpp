@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:38:29 +0000
-  Touch : Sun, 14 Jan 2018 22:41:49 +0000
+  Touch : Mon, 15 Jan 2018 00:20:14 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -15,6 +15,7 @@
 
 #include <falcon/fut/unittest.h>
 #include <falcon/fut/testcase.h>
+#include <falcon/fut/timelapse.h>
 
 #include <map>
 #include <string>
@@ -29,6 +30,21 @@
 namespace Falcon {
 namespace test{
 
+namespace {
+class Component {
+public:
+   Component(const std::string& n):
+      name(n),
+      failures(0)
+   {}
+
+   int failures;
+   std::string name;
+   std::vector<TestCase*> tests;
+   TimeLapse lapse;
+};
+}
+
 class UnitTest::Private {
 public:
    Private():
@@ -39,9 +55,10 @@ public:
    {}
 
    std::vector<TestCase* > tests;
-   std::map< std::string, TestCase*> testsByName;
-   std::multimap< std::string, TestCase*> testsByCategory;
-   std::vector<TestCase* > testsToPerofm;
+   std::map<std::string, TestCase*> testsByName;
+   std::multimap<std::string, TestCase*> testsByComponent;
+   std::map<std::string, Component> componentToPerform;
+   std::vector<TestCase*> testsToPerofm;
    std::string xmlReport;
 
    int status;
@@ -50,12 +67,15 @@ public:
 
    bool opt_erroutIsFail;
    UnitTest::t_verbosity verbosity;
+   TimeLapse lapse;
 };
+
 
 UnitTest::UnitTest():
    p(new Private)
 {
 }
+
 
 UnitTest::~UnitTest()
 {
@@ -67,7 +87,8 @@ TestCase* UnitTest::addTestCase(const char* component, const char* caseName, Tes
    tcase->setName(component, caseName);
    p->tests.push_back(tcase);
    p->testsByName.insert(std::make_pair(tcase->fullName(), tcase));
-   p->testsByCategory.insert(std::make_pair(tcase->componentName(), tcase));
+   p->testsByComponent.insert(std::make_pair(tcase->componentName(), tcase));
+
    return tcase;
 }
 
@@ -82,17 +103,40 @@ void UnitTest::init()
 
 void UnitTest::runAllTests()
 {
+   // Reorder the tests in components
    int count = 0;
    for(auto tcase: p->testsToPerofm ) {
-      beginTest(++count, tcase);
-      tcase->run();
-      endTest(count, tcase);
 
-      if (!hasPassed(tcase))
-      {
-         p->status = -1;
-         p->failedCount++;
+      auto catIter = p->componentToPerform.find(tcase->componentName());
+      Component* component;
+      if(catIter == p->componentToPerform.end()) {
+         component = &p->componentToPerform.insert(
+            std::make_pair(tcase->componentName(),
+               Component(tcase->componentName()))).first->second;
       }
+      else {
+         component = &catIter->second;
+      }
+      component->tests.push_back(tcase);
+   }
+
+   for(auto& itcat: p->componentToPerform) {
+      auto& component = itcat.second;
+      component.lapse.markBegin();
+
+      for(auto tcase: component.tests ) {
+         beginTest(++count, tcase);
+         tcase->run();
+         endTest(count, tcase);
+
+         if (!hasPassed(tcase))
+         {
+            p->status = -1;
+            p->failedCount++;
+            component.failures++;
+         }
+      }
+      component.lapse.markEnd();
    }
 }
 
@@ -220,7 +264,11 @@ int UnitTest::performUnitTests()
    if(testsToPerform.empty()) {
       testsToPerform = p->tests;
    }
+
+   p->lapse.begin();
    runAllTests();
+   p->lapse.end();
+
    report();
    if(!p->xmlReport.empty()) {
       saveToXML();
@@ -330,19 +378,37 @@ void UnitTest::saveToXML()
    }
 
    fout << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-   fout << "<testsuites id=\"\" name=\"\" tests=\"\" failures=\"\" time=\"\">\n";
-   fout << "<testsuite id=\"\" name=\"\" tests=\"\" failures=\"\" time=\"\">\n";
+   fout << "<testsuites id=\"\" name=\"UnitTests\" tests=\""
+            << p->testsToPerofm.size() << "\" "
+            << "failures=\"" << p->failedCount << "\" "
+            << "time=\""<< p->lapse.elapsed() / 1000.0 << "\">\n";
+   for(auto& icat: p->componentToPerform) {
+      auto& component = icat.second;
 
-   fout << "<testcase id=\"\" name=\"\" time=\"\">\n";
+      fout << "<testsuite id=\"\" "
+           << "name=\"" << component.name << "\" "
+           << "tests=\"" << component.tests.size() << "\" "
+           << "failures=\"" << component.failures << "\" "
+           << "time=\"" << component.lapse.elapsed() / 1000.0 << "\">\n";
 
-   fout << "<failure message=\"\" type=\"\">\n";
-   fout << "Category: COBOL Code Review – Naming Conventions\n"
-        << "File: /project/PROGRAM.cbl\n"
-        << "Line: 2\n";
-   fout << "</failure>\n";
+      for(auto tcasep: component.tests) {
+         fout << "<testcase id=\"\" "
+              << "name=\"" << tcasep->caseName() << "\" "
+              << "time=\"" << tcasep->elapsedTime() / 1000.0 << "\">\n";
 
-   fout << "</testcase>\n";
-   fout << "</testsuite>\n";
+         if(!hasPassed(tcasep)) {
+            fout << "<failure message=\"" << tcasep->failDesc() << "\" "
+                 << "type=\"" << tcasep->statusDesc() << "\">\n";
+            fout << tcasep->failDesc() << "\n"
+                 << "File: " << tcasep->failFile() << "\n"
+                 << "Line: " << tcasep->failLine() << "\n";
+            fout << "</failure>\n";
+         }
+         fout << "</testcase>\n";
+      }
+      fout << "</testsuite>\n";
+   }
+
    fout << "</testsuites>\n";
 }
 

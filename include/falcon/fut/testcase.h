@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:38:07 +0000
-  Touch : Sun, 14 Jan 2018 22:41:49 +0000
+  Touch : Mon, 15 Jan 2018 00:20:14 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -45,6 +45,7 @@ public:
 
    void status(t_status s);
    t_status status() const;
+   const char* statusDesc() const;
    const char* capturedOut() const;
    const char* capturedErr() const;
    const char* failDesc() const;
@@ -74,6 +75,7 @@ public:
    const char* caseName() const;
    const char* fullName() const;
 
+   int64 elapsedTime() const;
 
 protected:
    TestCase();
