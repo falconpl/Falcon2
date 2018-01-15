@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:38:29 +0000
-  Touch : Mon, 15 Jan 2018 00:20:14 +0000
+  Touch : Mon, 15 Jan 2018 15:31:45 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -369,7 +369,7 @@ void UnitTest::usage() {
 }
 
 
-void UnitTest::saveToXML()
+void UnitTest::saveToXML() const
 {
    std::ofstream fout(p->xmlReport);
    if(! fout) {
