@@ -14,6 +14,7 @@
 ******************************************************************************/
 
 #include <falcon/fut/marktime.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include <stdexcept>
 
@@ -28,6 +29,10 @@ void markTime(int64& currentMillisecs)
    }
    currentMillisecs = (tv.tv_sec * 1000);
    currentMillisecs += (tv.tv_usec / 1000);
+}
+
+void waitTime(int64 mseconds) {
+	usleep(mseconds * 1000);
 }
 
 }

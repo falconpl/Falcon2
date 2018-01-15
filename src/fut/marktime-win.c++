@@ -14,13 +14,23 @@
 ******************************************************************************/
 
 #include <falcon/fut/marktime.h>
+#include <windows.h>
 
 namespace Falcon {
 namespace testing {
 
 void markTime(int64& currentMillisecs)
 {
-  currentMillisecs = 0;
+   SYSTEMTIME now;
+   GetSystemTime(&now);
+   currentMillisecs = now.wHour * 3600 * 1000 +
+		now.wMinute * 60 * 1000 +
+		now.wSecond * 1000 +
+		now.wMilliseconds;
+}
+
+void waitTime(int64 millsecs) {
+	Sleep((DWORD)millsecs);
 }
 
 }

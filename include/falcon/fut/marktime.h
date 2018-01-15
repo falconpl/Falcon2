@@ -20,6 +20,7 @@
 namespace Falcon {
 namespace testing {
 void markTime(int64& currentMillisecs);
+void waitTime(int64& millisecs);
 }
 }
 
