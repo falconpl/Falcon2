@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:39:09 +0000
-  Touch : Mon, 15 Jan 2018 00:20:14 +0000
+  Touch : Tue, 16 Jan 2018 22:29:26 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -233,6 +233,12 @@ int64 TestCase::elapsedTime() const
 {
    return p->lapse.elapsed();
 }
+
+int64 TestCase::elapsedTimeNow() const
+{
+   return p->lapse.elapsedNow();
+}
+
 
 }
 }

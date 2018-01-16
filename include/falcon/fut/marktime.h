@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Sun, 14 Jan 2018 22:56:32 +0000
-  Touch : Mon, 15 Jan 2018 00:20:14 +0000
+  Touch : Tue, 16 Jan 2018 22:29:26 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -20,7 +20,7 @@
 namespace Falcon {
 namespace testing {
 void markTime(int64& currentMillisecs);
-void waitTime(int64& millisecs);
+void waitTime(int64 millisecs);
 }
 }
 

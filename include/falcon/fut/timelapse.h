@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Sun, 14 Jan 2018 23:15:56 +0000
-  Touch : Mon, 15 Jan 2018 00:20:14 +0000
+  Touch : Tue, 16 Jan 2018 22:29:26 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -44,6 +44,14 @@ public:
 
    int64 begin() const {return m_begin;}
    int64 end() const {return m_end;}
+
+   int64 elapsedNow() const{
+      int64 now;
+      markTime(now);
+      return m_begin > now
+                  ? now - m_begin + MSECS_IN_A_DAY
+                  : now - m_begin;
+   }
 
 public:
    int64 m_begin;

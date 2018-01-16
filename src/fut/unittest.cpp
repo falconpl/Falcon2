@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:38:29 +0000
-  Touch : Mon, 15 Jan 2018 15:31:45 +0000
+  Touch : Tue, 16 Jan 2018 22:29:26 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -24,6 +24,7 @@
 #include <algorithm>
 
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <sstream>
 
@@ -60,6 +61,9 @@ public:
    std::map<std::string, Component> componentToPerform;
    std::vector<TestCase*> testsToPerofm;
    std::string xmlReport;
+
+   std::string unitTestId;
+   std::string unitTestName;
 
    int status;
    int screenWidth;
@@ -120,6 +124,7 @@ void UnitTest::runAllTests()
       component->tests.push_back(tcase);
    }
 
+   p->lapse.markBegin();
    for(auto& itcat: p->componentToPerform) {
       auto& component = itcat.second;
       component.lapse.markBegin();
@@ -138,6 +143,7 @@ void UnitTest::runAllTests()
       }
       component.lapse.markEnd();
    }
+   p->lapse.markEnd();
 }
 
 void UnitTest::beginTest(int count, TestCase* tc)
@@ -182,24 +188,27 @@ void UnitTest::endTest(int count, TestCase* tc)
       std::cout << tc->failDesc() << "\n";
    }
    else if(p->verbosity >= REPORT_STATUS) {
-      writeTestName(count, tc->fullName(), hasPassed(tc) ? "OK" : "FAIL");
+      writeTestName(count, tc->fullName(), hasPassed(tc) ? "OK" : "FAIL", tc->elapsedTime()/1000.0);
    }
 }
 
-void UnitTest::writeTestName(int count, const char* tname, const char* result)
+void UnitTest::writeTestName(int count, const char* tname, const char* result, double elapsed)
 {
    std::ostringstream sname;
-   sname << "[" << count << ": " << tname;
-   int tnamelen = p->screenWidth - sname.str().length();
-   while(tnamelen > 0) {
-      sname << " ";
-      --tnamelen;
-   }
+   sname << "[" << std::setw(3) << count << ": "
+         << std::left << std::setw(p->screenWidth) << std::string(tname).substr(0, p->screenWidth);
 
-   std::string sres = result;
-   while(sres.length() < 4) sres += ' ';
-   sres += ']';
-   std::cout << sname.str().substr(0, p->screenWidth) << sres << '\n';
+   if( elapsed >= 0.0 ) {
+      std::ostringstream secs;
+      secs << std::fixed << std::setprecision(3)  << elapsed << "s";
+      sname << std::setw(10) << secs.str();
+   }
+   else {
+      sname << std::fixed << std::setw(10) << elapsed;
+   }
+   sname << std::setw(0) << " " << std::setw(4) << result << std::setw(0) << "]";
+
+   std::cout << sname.str() << "\n";
 }
 
 bool UnitTest::hasPassed(TestCase* tcase) const
@@ -231,7 +240,18 @@ void UnitTest::report()
             std::cout << "\n======================================================================\n";
          }
       }
-      std::cout << "Unit Test " <<( p->status == 0 ? "Passed\n" : "FAILED \n");
+
+      if(p->componentToPerform.size()>1) {
+         for(auto& itcat: p->componentToPerform) {
+            auto& component = itcat.second;
+            std::cout << "  Component " << component.name
+                     << " (elapsed " <<std::setprecision(3) << component.lapse.elapsed() / 1000.0 << "s) "
+                     << ( component.failures == 0 ? "Passed\n" : "FAILED \n");
+         }
+      }
+      std::cout << "Unit Test " << p->unitTestName
+         << " (elapsed " <<std::setprecision(4) << p->lapse.elapsed() / 1000.0 << "s) "
+         << ( p->status == 0 ? "Passed\n" : "FAILED \n");
    }
 }
 
@@ -265,10 +285,7 @@ int UnitTest::performUnitTests()
       testsToPerform = p->tests;
    }
 
-   p->lapse.begin();
    runAllTests();
-   p->lapse.end();
-
    report();
    if(!p->xmlReport.empty()) {
       saveToXML();
@@ -290,7 +307,9 @@ int UnitTest::performTest(const char* name)
 
 
    beginTest(1, titer->second);
+   p->lapse.markBegin();
    titer->second->run();
+   p->lapse.markEnd();
    endTest(1, titer->second);
 
    if (!hasPassed(titer->second))
@@ -319,6 +338,10 @@ int UnitTest::parseParams(int argc, char* argv[])
          setVerbosity(SILENT);
          continue;
       }
+      if(opt == "-q") {
+         p->opt_erroutIsFail = true;
+         continue;
+      }
       else if(opt == "-v" && ++i < argc) {
          std::istringstream is(argv[i]);
          int level;
@@ -339,8 +362,16 @@ int UnitTest::parseParams(int argc, char* argv[])
          p->testsToPerofm.push_back(iter->second);
          continue;
       }
-      else if (opt == "-o" && ++i < argc) {
+      else if (opt == "-x" && ++i < argc) {
          p->xmlReport = argv[i];
+         continue;
+      }
+      else if (opt == "-n" && ++i < argc) {
+         p->unitTestName = argv[i];
+         continue;
+      }
+      else if (opt == "-i" && ++i < argc) {
+         p->unitTestId = argv[i];
          continue;
       }
       else if(opt == "-h") {
@@ -360,11 +391,14 @@ int UnitTest::parseParams(int argc, char* argv[])
 
 void UnitTest::usage() {
    std::cout << "UnitTest command line options:\n\n"
+      << "\t-e\tFail tests on STDERR output\n"
+      << "\t-i\tSet an explicit ID for the unit test\n"
       << "\t-h\tThis help\n"
+      << "\t-n\tSet an explicit name for the UnitTest\n"
       << "\t-q\tRun quietly (suppress all output)\n"
-      << "\t-o FILE\tSave XML report to this file\n"
       << "\t-t NAME\tRun given test (may be used multiple times)\n"
       << "\t-v N\tSets verbosity level to N (" << SILENT << "=silent, "
+      << "\t-x FILE\tSave XML report to this file\n"
       << REPORT_STDOUT <<"=all)\n\n";
 }
 
@@ -378,21 +412,22 @@ void UnitTest::saveToXML() const
    }
 
    fout << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-   fout << "<testsuites id=\"\" name=\"UnitTests\" tests=\""
-            << p->testsToPerofm.size() << "\" "
+
+   fout << "<testsuites id=\""<< p->unitTestId << "\" name=\"" << p->unitTestName
+            << "\" tests=\"" << p->testsToPerofm.size() << "\" "
             << "failures=\"" << p->failedCount << "\" "
             << "time=\""<< p->lapse.elapsed() / 1000.0 << "\">\n";
    for(auto& icat: p->componentToPerform) {
       auto& component = icat.second;
 
-      fout << "<testsuite id=\"\" "
+      fout << "<testsuite id=\"" << p->unitTestId << "." << component.name << "\" "
            << "name=\"" << component.name << "\" "
            << "tests=\"" << component.tests.size() << "\" "
            << "failures=\"" << component.failures << "\" "
            << "time=\"" << component.lapse.elapsed() / 1000.0 << "\">\n";
 
       for(auto tcasep: component.tests) {
-         fout << "<testcase id=\"\" "
+         fout << "<testcase id=\"" << p->unitTestId << "." << component.name << "." << tcasep->caseName() << "\" "
               << "name=\"" << tcasep->caseName() << "\" "
               << "time=\"" << tcasep->elapsedTime() / 1000.0 << "\">\n";
 
@@ -408,14 +443,35 @@ void UnitTest::saveToXML() const
       }
       fout << "</testsuite>\n";
    }
-
    fout << "</testsuites>\n";
+}
+
+void UnitTest::detectTestName(const char* exeName)
+{
+   std::string filename = exeName;
+   auto pos = filename.rfind(FALCON_DIR_SEP_CHR);
+   if(pos != std::string::npos) {
+      filename = filename.substr(pos+1);
+   }
+
+   pos = filename.find(".");
+   if(pos != std::string::npos) {
+      filename = filename.substr(0, pos);
+   }
+
+   p->unitTestId = p->unitTestName = filename;
 }
 
 
 int UnitTest::main(int argc, char* argv[])
 {
-   int status = parseParams(argc, argv);
+   int status = 0;
+   if (argc > 0)
+   {
+      detectTestName(argv[0]);
+      status = parseParams(argc-1, argv+1);
+   }
+
    if(!status) {
       status = performUnitTests();
       destroy();

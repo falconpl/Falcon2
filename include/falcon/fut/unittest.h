@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:37:43 +0000
-  Touch : Mon, 15 Jan 2018 15:31:45 +0000
+  Touch : Tue, 16 Jan 2018 22:29:26 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -73,10 +73,11 @@ private:
    void runAllTests();
    void report();
    void destroy();
-   void writeTestName(int count, const char* tname, const char* result);
+   void writeTestName(int count, const char* tname, const char* result, double elapsed=-1);
    void beginTest(int count, TestCase* tc);
    void endTest(int count, TestCase* tc);
    void saveToXML() const;
+   void detectTestName(const char* exeName);
 
    bool hasPassed(TestCase* tc) const;
 };

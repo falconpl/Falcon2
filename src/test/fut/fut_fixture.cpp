@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Sat, 13 Jan 2018 21:06:37 +0000
-  Touch : Sat, 13 Jan 2018 21:50:53 +0000
+  Touch : Tue, 16 Jan 2018 22:29:26 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -38,7 +38,7 @@ public:
 
 
 TEST_F(MyTest, SetUpCalled) {
-   EXPECT_SEQ("SetUp", m_v);
+   EXPECT_STREQ("SetUp", m_v);
 }
 
 int main(int argc, char* argv[])

@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 12:42:42 +0000
-  Touch : Sun, 14 Jan 2018 22:41:49 +0000
+  Touch : Tue, 16 Jan 2018 22:29:26 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -65,7 +65,13 @@
 #define EXPECT_GE( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(_EXPECTED_,>=,_ACTUAL_)
 #define EXPECT_LT( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(_EXPECTED_,<,_ACTUAL_)
 #define EXPECT_LE( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(_EXPECTED_,<=,_ACTUAL_)
-#define EXPECT_SEQ( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(std::string(_EXPECTED_),==,std::string(_ACTUAL_))
+#define EXPECT_STREQ( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(std::string(_EXPECTED_),==,std::string(_ACTUAL_))
+#define EXPECT_FLOAT_EQ( _EXPECTED_, _ACTUAL_) \
+            FALCON_TEST_CHECK_LOGIC(static_cast<::Falcon::int64>(_EXPECTED_*10000.0),\
+               ==,static_cast<::Falcon::int64>(_ACTUAL_*10000.0))
+#define EXPECT_FLOAT_NE( _EXPECTED_, _ACTUAL_) \
+            FALCON_TEST_CHECK_LOGIC(static_cast<::Falcon::int64>(_EXPECTED_*10000.0),\
+               !=,static_cast<::Falcon::int64>(_ACTUAL_*10000.0))
 
 #define FAIL(_MESSAGE_) \
    this->checkFail( __FILE__, __LINE__, _MESSAGE_, "" );
@@ -102,7 +108,7 @@
 
 #define FALCON_TEST_MAIN      \
       int main(int argc, char* argv[]) { \
-         return ::Falcon::testing::UnitTest::singleton()->main(argc-1, argv+1); \
+         return ::Falcon::testing::UnitTest::singleton()->main(argc, argv); \
       }
 
 

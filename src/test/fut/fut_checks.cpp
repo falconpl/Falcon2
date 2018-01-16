@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 20:48:25 +0000
-  Touch : Sat, 13 Jan 2018 21:50:53 +0000
+  Touch : Tue, 16 Jan 2018 22:29:26 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -55,7 +55,15 @@ FALCON_TEST(EXPECT, ThrowPositive)
 
 TEST(EXPECT, StringEquality)
 {
-   EXPECT_SEQ("A string", "A string");
+   EXPECT_STREQ("A string", "A string");
+}
+
+TEST(EXPECT, FloatEquality)
+{
+   double test = 100.0/3.0;
+   EXPECT_FLOAT_EQ(33.333333, test);
+   EXPECT_FLOAT_NE(33.334, test);
+
 }
 
 FALCON_TEST_MAIN

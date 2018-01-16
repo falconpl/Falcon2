@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 09 Jan 2018 16:38:07 +0000
-  Touch : Mon, 15 Jan 2018 00:20:14 +0000
+  Touch : Tue, 16 Jan 2018 22:29:26 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -75,7 +75,10 @@ public:
    const char* caseName() const;
    const char* fullName() const;
 
+   /** Time elapsed by the test from beginning to end */
    int64 elapsedTime() const;
+   /** Time elapsed by the test from beginning up to this moment */
+   int64 elapsedTimeNow() const;
 
 protected:
    TestCase();
