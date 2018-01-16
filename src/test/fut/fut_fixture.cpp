@@ -44,7 +44,10 @@ TEST_F(MyTest, SetUpCalled) {
 int main(int argc, char* argv[])
 {
    Falcon::testing::UnitTest* ut = Falcon::testing::UnitTest::singleton();
-   ut->parseParams(argc, argv);
+   ut->detectTestName(argv[0]);
+   if (!ut->parseParams(argc - 1, argv + 1)) {
+      return 0;
+   }
    if (0 != ut->performTest("MyTest::SetUpCalled")) {
       return 1;
    }

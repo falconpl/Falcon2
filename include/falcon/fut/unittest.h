@@ -56,6 +56,7 @@ public:
     * @note After this call this object will be invalid.
     */
    int main(int argc, char* argv[]);
+   void detectTestName(const char* exeName);
 
    int parseParams(int argc, char* argv[]);
    int performUnitTests();
@@ -77,7 +78,7 @@ private:
    void beginTest(int count, TestCase* tc);
    void endTest(int count, TestCase* tc);
    void saveToXML() const;
-   void detectTestName(const char* exeName);
+   
 
    bool hasPassed(TestCase* tc) const;
 };

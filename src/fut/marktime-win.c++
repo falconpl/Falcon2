@@ -19,7 +19,7 @@
 namespace Falcon {
 namespace testing {
 
-void markTime(int64& currentMillisecs)
+void FALCON_API_ markTime(int64& currentMillisecs)
 {
    SYSTEMTIME now;
    GetSystemTime(&now);
@@ -29,7 +29,7 @@ void markTime(int64& currentMillisecs)
 		now.wMilliseconds;
 }
 
-void waitTime(int64 millsecs) {
+void FALCON_API_ waitTime(int64 millsecs) {
 	Sleep((DWORD)millsecs);
 }
 

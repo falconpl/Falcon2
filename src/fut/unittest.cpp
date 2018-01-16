@@ -208,7 +208,7 @@ void UnitTest::writeTestName(int count, const char* tname, const char* result, d
    }
    sname << std::setw(0) << " " << std::setw(4) << result << std::setw(0) << "]";
 
-   std::cout << sname.str() << "\n";
+   std::cout << sname.str() << "\n" <<std::flush;
 }
 
 bool UnitTest::hasPassed(TestCase* tcase) const
@@ -338,7 +338,7 @@ int UnitTest::parseParams(int argc, char* argv[])
          setVerbosity(SILENT);
          continue;
       }
-      if(opt == "-q") {
+      else if(opt == "-e") {
          p->opt_erroutIsFail = true;
          continue;
       }
@@ -390,16 +390,17 @@ int UnitTest::parseParams(int argc, char* argv[])
 
 
 void UnitTest::usage() {
-   std::cout << "UnitTest command line options:\n\n"
-      << "\t-e\tFail tests on STDERR output\n"
-      << "\t-i\tSet an explicit ID for the unit test\n"
-      << "\t-h\tThis help\n"
-      << "\t-n\tSet an explicit name for the UnitTest\n"
-      << "\t-q\tRun quietly (suppress all output)\n"
-      << "\t-t NAME\tRun given test (may be used multiple times)\n"
-      << "\t-v N\tSets verbosity level to N (" << SILENT << "=silent, "
-      << "\t-x FILE\tSave XML report to this file\n"
-      << REPORT_STDOUT <<"=all)\n\n";
+	std::cout << "UnitTest command line options:\n\n"
+		<< "\t-e\tFail tests on STDERR output\n"
+		<< "\t-i\tSet an explicit ID for the unit test\n"
+		<< "\t-h\tThis help\n"
+		<< "\t-n\tSet an explicit name for the UnitTest\n"
+		<< "\t-q\tRun quietly (suppress all output)\n"
+		<< "\t-t NAME\tRun given test (may be used multiple times)\n"
+		<< "\t-v N\tSets verbosity level to N (" << SILENT << "=silent, "
+		<< REPORT_STDOUT << "=all)\n"
+		<< "\t-x FILE\tSave XML report to this file\n"
+		<< "\n";
 }
 
 

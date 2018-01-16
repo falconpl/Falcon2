@@ -138,6 +138,7 @@ int test( int id )
 int main(int argc, char* argv[])
 {
    Falcon::testing::UnitTest* ut = Falcon::testing::UnitTest::singleton();
+   ut->detectTestName(argv[0]);
    ut->parseParams(argc-1, argv+1);
 
    int result = 0;

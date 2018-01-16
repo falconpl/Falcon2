@@ -19,8 +19,8 @@
 #include <falcon/setup.h>
 namespace Falcon {
 namespace testing {
-void markTime(int64& currentMillisecs);
-void waitTime(int64 millisecs);
+void FALCON_API_ markTime(int64& currentMillisecs);
+void FALCON_API_ waitTime(int64 millisecs);
 }
 }
 
