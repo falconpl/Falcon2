@@ -7,7 +7,7 @@
 #   -------------------------------------------------------------------
 #   Author: Giancarlo Niccolai
 #   Begin : Tue, 02 Jan 2018 11:41:45 +0000
-#   Touch : Tue, 02 Jan 2018 11:41:45 +0000
+#   Touch : Wed, 17 Jan 2018 20:53:39 +0000
 #
 #   -------------------------------------------------------------------
 #   (C) Copyright 2018 The Falcon Programming Language
@@ -36,7 +36,10 @@ DATE=`date -R`
 cat "$TARGET" | \
 	sed -e "s/ Touch : [A-Z][a-z].*$/ Touch : $DATE/" \
 	> "$TARGET.temp"
-mv "$TARGET.temp" "$TARGET"
+mv "$TARGET" "$TARGET.old" && \
+	mv "$TARGET.temp" "$TARGET" && \
+	chmod -f --reference="$TARGET.old" "$TARGET" && \
+	rm -f "$TARGET.old"
 
 popd > /dev/null
 
