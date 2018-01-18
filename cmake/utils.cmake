@@ -27,7 +27,14 @@ function( falcon_add_fut_and_res source other res )
    set_target_properties( "${source}"
          PROPERTIES
          RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${FALCON_BIN_DIR}/tests/")
-         
+   
+   if(WIN32)
+   add_custom_command(TARGET "${source}" POST_BUILD            # Adds a post-build event to MyTest
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different          # which executes "cmake - E copy_if_different..."
+        "${CMAKE_BINARY_DIR}/${FALCON_BIN_DIR}/${CMAKE_BUILD_TYPE}/falcon_fut.dll"
+        "$<TARGET_FILE_DIR:${source}>")                        # <--this is out-file path
+   endif()
+
    target_link_libraries(${source} falcon_fut)
    add_test("${source}" "${CMAKE_BINARY_DIR}/${FALCON_BIN_DIR}/tests/${source}" )
       

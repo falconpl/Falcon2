@@ -66,6 +66,25 @@
 #define EXPECT_LT( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(_EXPECTED_,<,_ACTUAL_)
 #define EXPECT_LE( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(_EXPECTED_,<=,_ACTUAL_)
 #define EXPECT_STREQ( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(std::string(_EXPECTED_),==,std::string(_ACTUAL_))
+#define EXPECT_STRNE( _EXPECTED_, _ACTUAL_) FALCON_TEST_CHECK_LOGIC(std::string(_EXPECTED_),!=,std::string(_ACTUAL_))
+
+#define EXPECT_TRUE(_ACTUAL_) \
+      if(!(_ACTUAL_)) { \
+		   std::ostringstream ss; \
+		   ss << (_ACTUAL_); \
+			this->checkFail( __FILE__, __LINE__, #_ACTUAL_ " should be true", ss.str().c_str() ); \
+			return; \
+		}
+
+#define EXPECT_FALSE(_ACTUAL_) \
+      if((_ACTUAL_)) { \
+		   std::ostringstream ss; \
+		   ss << (_ACTUAL_); \
+			this->checkFail( __FILE__, __LINE__, #_ACTUAL_ " should be false", ss.str().c_str() ); \
+			return; \
+		}
+
+
 #define EXPECT_FLOAT_EQ( _EXPECTED_, _ACTUAL_) \
             FALCON_TEST_CHECK_LOGIC(static_cast<::Falcon::int64>(_EXPECTED_*10000.0),\
                ==,static_cast<::Falcon::int64>(_ACTUAL_*10000.0))
