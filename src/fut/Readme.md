@@ -147,14 +147,13 @@ Each unit test is a stand-alone executable program (using `falcon_fut` dynamic l
 * __-n__ - Set an explicit name for the UnitTest. Normally, the unit test receives the filename of the program in which it runs as its Name for error reporting (JTEST format). This option allows to override this setting.
 * __-q__ - Run quietly (suppress all output).
 * __-t _NAME___ - Run given test only. The test name must be given in the format "Component::name". The option can be specified multiple times to run multiple tests.
-* __-v _N___ - Sets verbosity level to N:
-** 0: equivalent to __-q__
-** 1: Report only a summary at the end of the whole unit test
-** 2: Report the result of each unit test after its completion.
-** 3: Announce each unit test before running it and report result of each unit test after its completion.
-** 4: like 3, but also dump any text written on std::cerr by the tests.
-** 5: like 4, but also dump any text written on std::out by the tests.
-If the verbosity is 2 or above, std::cout and/or std::cerr will be dumped in case the test fails, while they will be dumped if the test succeeds only with verbosity 4 (std::cerr) or 5 (std::cout).
+* __-v _N___ - Sets verbosity level to _N_ -- NOTE: If the verbosity is 2 or above, std::cout and/or std::cerr will be dumped in case the test fails, while they will be dumped if the test succeeds only with verbosity 4 (std::cerr) or 5 (std::cout):
+*  0: equivalent to __-q__
+*  1: Report only a summary at the end of the whole unit test
+*  2: Report the result of each unit test after its completion.
+*  3: Announce each unit test before running it and report result of each unit test after its completion.
+*  4: like 3, but also dump any text written on std::cerr by the tests.
+*  5: like 4, but also dump any text written on std::out by the tests.
 * __-x _FILE___ Save an XML report in JTEST schema t the given _FILE_. Useful for Jenkins automation.
 
     
