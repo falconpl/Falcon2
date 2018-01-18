@@ -156,4 +156,4 @@ Each unit test is a stand-alone executable program (using `falcon_fut` dynamic l
 *  5: like 4, but also dump any text written on std::out by the tests.
 * __-x _FILE___ Save an XML report in JTEST schema t the given _FILE_. Useful for Jenkins automation.
 
-    
+Notice that the program containing the unit test will terminate with non-zero value if the test fails, and with 0 if the test succeed.
