@@ -32,6 +32,10 @@ FALCON_TEST(EXPECT, BasicPositive)
    EXPECT_LT(ivalue, 20);
    EXPECT_LE(ivalue, 20);
    EXPECT_LE(ivalue, 10);
+
+   EXPECT_TRUE(1==1);
+   EXPECT_FALSE(1 == 2);
+
 }
 
 FALCON_TEST(EXPECT, ThrowPositive)
@@ -56,6 +60,7 @@ FALCON_TEST(EXPECT, ThrowPositive)
 TEST(EXPECT, StringEquality)
 {
    EXPECT_STREQ("A string", "A string");
+   EXPECT_STRNE("A string", "Another string");
 }
 
 TEST(EXPECT, FloatEquality)

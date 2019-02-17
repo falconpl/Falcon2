@@ -45,7 +45,7 @@ The `>` (fast print and new line) and `>>` (fast print) are used to perform basi
 
 Number are considered as objects, and they can have properties and methods. For example:
 ```
-foreach(printl) // prints 1..5
+1.foreach(printl) // prints 1..5
 -5.foreach(printl) // -1..-5
 ```
 
