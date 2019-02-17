@@ -1,5 +1,5 @@
 /*****************************************************************************
-  FALCON - The Falcon Programming Language
+  FALCON2 - The Falcon Programming Language
   FILE: @name@
 
   @short@

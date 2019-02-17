@@ -56,7 +56,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${FALCON_LIB_DIR}" CACHE
   "Where to put the archives"
 )
 
-include_directories( include )
+include_directories( src/include )
 include_directories( "${CMAKE_BINARY_DIR}/${FALCON_INC_DIR}" )
 
 #########################################################
@@ -70,9 +70,5 @@ include( cmake/install-gnudocs.cmake )
 #########################################################
 # Subdirectories
 
-add_subdirectory(include)
 add_subdirectory(src)
-
-#add_subdirectory( test )
-
 
