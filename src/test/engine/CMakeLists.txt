@@ -1,19 +1,20 @@
 ##############################################################################
 #   FALCON2 - The Falcon Programming Language
-#   FILE: @path@
+#   FILE: src/test/engine/CMakeLists.txt
 #
-#   @short@
+#   CMAKE lists for tests on the Falcon Unit Test subsystem
 #   -------------------------------------------------------------------
-#   Author: @author@
-#   Begin : @begin@
-#   Touch : @begin@
+#   Author: Giancarlo Niccolai
+#   Begin : Tue, 09 Jan 2018 14:46:25 +0000
+#   Touch : Sun, 17 Feb 2019 14:17:31 +0000
 #
 #   -------------------------------------------------------------------
-#   (C) Copyright @year@ The Falcon Programming Language
+#   (C) Copyright 2019 The Falcon Programming Language
 #   Released under Apache 2.0 License.
 ##############################################################################
 
+falcon_add_fut( compiler.fut )
+target_link_libraries(compiler.fut  falcon_engine)
 
-
-# end of @name@
+# end of CMakeLists.txt
 

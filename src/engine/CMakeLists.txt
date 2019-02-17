@@ -1,27 +1,22 @@
 ##############################################################################
-#   FALCON - The Falcon Programming Language
-#   FILE: src/CMakeLists.txt
+#   FALCON2 - The Falcon Programming Language
+#   FILE: src/test/engine/CMakeLists.txt
 #
-#   Main core Falcon CMAKE lists
+#   CMAKE lists for tests on the Falcon Unit Test subsystem
 #   -------------------------------------------------------------------
 #   Author: Giancarlo Niccolai
-#   Begin : Tue, 09 Jan 2018 14:39:31 +0000
+#   Begin : Tue, 09 Jan 2018 14:46:25 +0000
 #   Touch : Sun, 17 Feb 2019 14:17:30 +0000
 #
 #   -------------------------------------------------------------------
-#   (C) Copyright 2018 The Falcon Programming Language
+#   (C) Copyright 2019 The Falcon Programming Language
 #   Released under Apache 2.0 License.
 ##############################################################################
 
-# Startup
-add_subdirectory(include)
-add_subdirectory(fut)
-
-# Main Code
-add_subdirectory(engine)
-
-# Build completion (tests)
-add_subdirectory(test)
+file(GLOB SOURCES *.cpp)
+add_definitions(-DFALCON_ENGINE_EXPORTS)
+     
+add_library(falcon_engine SHARED
+   ${SOURCES} )
 
 # end of CMakeLists.txt
-
