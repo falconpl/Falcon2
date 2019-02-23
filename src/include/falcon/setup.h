@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Tue, 02 Jan 2018 16:51:09 +0000
-  Touch : Tue, 09 Jan 2018 23:27:02 +0000
+  Touch : Sat, 23 Feb 2019 07:17:16 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
@@ -44,11 +44,6 @@
 
    /* Specifigs for MSVC */
    #ifdef _MSC_VER
-      #ifdef FALCON_EXPORT_SERVICE
-         #define FALCON_SERVICE __declspec(dllexport)
-      #else
-         #define FALCON_SERVICE __declspec(dllimport)
-      #endif
 
       #pragma warning (disable: 4786 )
       #pragma warning (disable: 4291 )
@@ -73,9 +68,6 @@
 
    /* Specifics for Gcc/Mingw */
    #ifdef __GNUC__
-
-	   #define FALCON_MODULE_TYPE \
-	      extern "C" __declspec(dllexport) ::Falcon::Module *
       #define LLFMT    "ll"
       #define I64LIT(x) (x ## LL)
       #define UI64LIT(x) (x ## ULL)
