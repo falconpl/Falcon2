@@ -6,14 +6,14 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Sat, 23 Feb 2019 12:55:51 +0000
-  Touch : Sat, 23 Feb 2019 17:36:46 +0000
+  Touch : Sun, 24 Feb 2019 09:54:01 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2019 The Falcon Programming Language
   Released under Apache 2.0 License.
 ******************************************************************************/
 
-#include <log.h>
+#include <falcon/log.h>
 
 #include <algorithm>
 
@@ -39,13 +39,13 @@ LogSystem::~LogSystem()
 	stop();
 
 	// delete the pending messages
-	for(auto iter: m_messages){
-		delete *iter;
+	for(auto* message: m_messages){
+		delete message;
 	}
 
 	// and delete the pool
-	for(auto iter: m_pool){
-		delete *iter;
+	for(auto* message: m_pool){
+		delete message;
 	}
 }
 
@@ -53,7 +53,7 @@ LogSystem::~LogSystem()
 void LogSystem::start() {
 	std::lock_guard<std::mutex> guard(m_mtxThread);
 	if(m_logThread == 0) {
-		m_logThread = new std::thread(LogSystem::loggingThread, this);
+		m_logThread = new std::thread(&LogSystem::loggingThread, this);
 	}
 }
 
@@ -143,7 +143,7 @@ void LogSystem::loggingThread() noexcept
 	while(true) {
 		std::unique_lock<std::mutex> msgl(m_mtxMessage);
 		msgl.lock();
-		m_cvLogs.wait(msgl, [](){
+		m_cvLogs.wait(msgl, [=](){
 			return ! m_messages.empty() || m_isTerminated;
 			}
 		);
@@ -223,12 +223,14 @@ void LogSystem::disposeMsg(Message* msg) noexcept
 void LogSystem::cleanupTerminatedListeners()
 {
 	std::remove_if(m_activeListeners.begin(), m_activeListeners.end(),
-	      [](auto& listener) { return listener->m_detached; });
+	      [](auto& listener) { return listener->isDetached(); });
 }
 
 bool LogSystem::checkCategory(std::shared_ptr<std::string>listenerCat, const std::string& msgCat)
 {
 	return msgCat.empty() || *listenerCat == msgCat;
+}
+
 }
 
 /* end of log.cpp */

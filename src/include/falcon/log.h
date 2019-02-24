@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Sat, 23 Feb 2019 10:30:32 +0000
-  Touch : Sat, 23 Feb 2019 17:36:46 +0000
+  Touch : Sun, 24 Feb 2019 09:54:01 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2019 The Falcon Programming Language
@@ -66,7 +66,7 @@ public:
 		   m_level(CRITICAL)
 	   {}
 
-	   Message(const std::string& file, int line, LEVEL level, const std::string& cat, const String& message ):
+	   Message(const std::string& file, int line, LEVEL level, const std::string& cat, const std::string& message ):
 		   m_file(file),
 		   m_line(line),
 		   m_level(level),
@@ -95,7 +95,7 @@ public:
    {
    public:
       Listener() noexcept :
-	  	  m_category(""),
+	  	  m_category(std::make_shared<std::string>("")),
 		  m_level(LEVEL::TRACE),
 		  m_enabled(true),
 		  m_detached(false)
@@ -120,7 +120,7 @@ public:
        * Returns the current category filter
        */
       const std::string& category() const noexcept {
-    	  return m_category;
+    	  return *m_category.get();
       }
 
 
@@ -144,7 +144,9 @@ public:
       void level(LEVEL l) noexcept {m_level = l;}
 
       /** Get the current minimum log level */
-      LEVEL level() const noexcept { return m_level;}
+      LEVEL level() const noexcept {return m_level;}
+
+      bool isDetached() const noexcept {return m_detached;}
 
    protected:
       virtual void onMessage( const Message& msg ) = 0;
@@ -155,13 +157,13 @@ public:
       std::atomic<bool> m_enabled;
       std::atomic<bool> m_detached;
 
-      friend class Log;
+      friend class LogSystem;
    };
 
    /**
     * Send a log message.
     */
-   void log( const std::string& file, int line, LEVEL level, const std::string& cat, const std::string& message ) noexcept;
+   void log( const std::string& file, int line, LEVEL level, const std::string& cat, const std::string& message );
    void log( Message* msg ) noexcept;
 
    /**
@@ -213,9 +215,10 @@ private:
    void disposeMsg(Message*) noexcept;
    void cleanupTerminatedListeners();
    void sendMessageToListeners(Message* msg) noexcept;
-   void processNewListeners();
+   void processNewListeners() noexcept;
 
-   static bool checkCategory(std::shared_ptr<std::string>listenerCat, const std::string& msgCat);
+   static bool
+   checkCategory(std::shared_ptr<std::string>listenerCat, const std::string& msgCat);
 
    /** Maximum number of pre-allocated message */
    enum {
