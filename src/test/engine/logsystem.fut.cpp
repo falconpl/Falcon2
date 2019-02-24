@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Sun, 24 Feb 2019 10:15:41 +0000
-  Touch : Sun, 24 Feb 2019 11:31:35 +0000
+  Touch : Sun, 24 Feb 2019 12:42:57 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2019 The Falcon Programming Language
@@ -63,6 +63,24 @@ public:
 	   return true;
    }
 
+   void sanityCheck(size_t enabled=2, size_t msgs=1) {
+	   // Stop waits for the log thread to be stopped, so  we know
+	   // we have a stable situation on the message queues.
+	    m_log->stop();
+		Falcon::LogSystem::Diags diags;
+		m_log->getDiags(diags);
+
+		EXPECT_EQ(Falcon::LogSystem::MESSAGE_POOL_THRESHOLD, diags.m_poolSize);
+		EXPECT_EQ(2, diags.m_activeListeners);
+		EXPECT_EQ(enabled, diags.m_enabledListeners);
+		EXPECT_EQ(0, diags.m_pendingListeners);
+		EXPECT_EQ(msgs, diags.m_msgReceived);
+		EXPECT_EQ(0, diags.m_msgsCreated);
+		EXPECT_EQ(0, diags.m_msgsDiscarded);
+
+		EXPECT_LE(msgs, diags.m_maxMsgQueueSize);
+   }
+
    std::unique_ptr<Falcon::LogSystem> m_log;
    std::shared_ptr<TestListener> m_listener;
    std::shared_ptr<TestListener> m_catcher;
@@ -72,9 +90,25 @@ public:
 };
 
 
+TEST_F(LogTest, Smoke) {
+	Falcon::LogSystem::Diags diags;
+	m_log->getDiags(diags);
+
+	EXPECT_EQ(Falcon::LogSystem::MESSAGE_POOL_THRESHOLD, diags.m_poolSize);
+	EXPECT_EQ(0, diags.m_activeListeners);
+	EXPECT_EQ(0, diags.m_enabledListeners);
+	EXPECT_EQ(2, diags.m_pendingListeners);
+	EXPECT_EQ(0, diags.m_msgReceived);
+	EXPECT_EQ(0, diags.m_msgsCreated);
+	EXPECT_EQ(0, diags.m_msgsDiscarded);
+
+	EXPECT_EQ(0, diags.m_maxMsgQueueSize);
+}
+
+
 TEST_F(LogTest, ReceiveMessage) {
 	// Send the log
-	sendLog(Falcon::LogSystem::LEVEL::CRITICAL, "Category");
+	sendLog(Falcon::LogSystem::LEVEL::INFO, "Category");
 
 	// Wait for the message to be received.
 	if(waitResult(m_incoming)) {
@@ -82,9 +116,10 @@ TEST_F(LogTest, ReceiveMessage) {
 		Falcon::LogSystem::Message msg = m_incoming.get();
 		EXPECT_STREQ("File", msg.m_file);
 		EXPECT_EQ(101, msg.m_line);
-		EXPECT_EQ(Falcon::LogSystem::LEVEL::CRITICAL, msg.m_level);
+		EXPECT_EQ(Falcon::LogSystem::LEVEL::INFO, msg.m_level);
 		EXPECT_STREQ("Category", msg.m_category);
 		EXPECT_STREQ("Message", msg.m_message);
+		sanityCheck();
 	}
 }
 
@@ -101,24 +136,61 @@ TEST_F(LogTest, DiscardLevel) {
 		if(m_incoming.wait_for(std::chrono::seconds(0)) != std::future_status::timeout) {
 			FAIL("The message was not filtered out on lower log level");
 		}
+		else {
+			sanityCheck();
+		}
 	}
 }
 
 
 TEST_F(LogTest, DiscardCategory) {
-	// We now check that a listener is not sent messages
-	// it is not interested in (by level).
-
+	//Listener with a non-matching category should be ignored.
 	m_listener->category("SomeCategory");
-	sendLog(Falcon::LogSystem::LEVEL::TRACE, "Category");
+	sendLog(Falcon::LogSystem::LEVEL::CRITICAL, "Category");
 
 	// Wait for the message to be received.
 	if(waitResult(m_caught)) {
 		if(m_incoming.wait_for(std::chrono::seconds(0)) != std::future_status::timeout) {
 			FAIL("The message was not filtered out on different category");
 		}
+		else {
+			sanityCheck();
+		}
 	}
 }
+
+
+TEST_F(LogTest, ListenerDisabled) {
+	// Disabled listeners must not receive messages.
+	m_listener->enable(false);
+	sendLog(Falcon::LogSystem::LEVEL::TRACE, "Category");
+
+	// Wait for the message to be received.
+	if(waitResult(m_caught)) {
+		if(m_incoming.wait_for(std::chrono::seconds(0)) != std::future_status::timeout) {
+			FAIL("The message was sent to a disabled listener");
+		}
+		else {
+			sanityCheck(1,1);
+		}
+	}
+}
+
+
+TEST_F(LogTest, RightCategory) {
+	// Be sure that a listener gets intended categories
+	m_listener->category("Good.*");
+	sendLog(Falcon::LogSystem::LEVEL::INFO, "GoodCategory");
+
+	// Wait for the message to be received.
+	if(waitResult(m_incoming)) {
+		//Checks:
+		Falcon::LogSystem::Message msg = m_incoming.get();
+		EXPECT_STREQ("GoodCategory", msg.m_category);
+		sanityCheck();
+	}
+}
+
 
 FALCON_TEST_MAIN
 

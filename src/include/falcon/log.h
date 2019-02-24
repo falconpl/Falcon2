@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Sat, 23 Feb 2019 10:30:32 +0000
-  Touch : Sun, 24 Feb 2019 09:54:01 +0000
+  Touch : Sun, 24 Feb 2019 12:42:56 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2019 The Falcon Programming Language
@@ -24,6 +24,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <regex>
 #include <string>
 #include <thread>
 
@@ -95,7 +96,6 @@ public:
    {
    public:
       Listener() noexcept :
-	  	  m_category(std::make_shared<std::string>("")),
 		  m_level(LEVEL::TRACE),
 		  m_enabled(true),
 		  m_detached(false)
@@ -111,16 +111,18 @@ public:
        */
       void category( const std::string& regex_cat )
       {
-    	  // TODO: compile the regex
-    	  // The unique pointer is atomically set.
-    	  m_category = std::make_shared<std::string>(regex_cat);
+    	  std::lock_guard<std::mutex> guard(m_mtxCategory);
+    	  // may throw in case of error
+    	  m_catRegex = std::regex(regex_cat);
+    	  m_category = regex_cat;
       }
 
       /**
        * Returns the current category filter
        */
       const std::string& category() const noexcept {
-    	  return *m_category.get();
+    	  std::lock_guard<std::mutex> guard(m_mtxCategory);
+    	  return m_category;
       }
 
 
@@ -148,15 +150,25 @@ public:
 
       bool isDetached() const noexcept {return m_detached;}
 
+      bool checkCategory(const std::string& cat) const noexcept {
+    	  if(cat == "") return true;
+    	  std::lock_guard<std::mutex> guard(m_mtxCategory);
+    	  if(m_category == "") {
+    		  return true;
+    	  }
+    	  return std::regex_match(cat.begin(), cat.end(), m_catRegex);
+      }
+
    protected:
       virtual void onMessage( const Message& msg ) = 0;
 
    private:
-      std::shared_ptr<std::string> m_category;
+      mutable std::mutex m_mtxCategory;
+      std::string m_category;
+      std::regex m_catRegex;
       std::atomic<LEVEL> m_level;
       std::atomic<bool> m_enabled;
       std::atomic<bool> m_detached;
-
       friend class LogSystem;
    };
 
@@ -208,6 +220,33 @@ public:
    /** Stops the service */
    void stop() noexcept;
 
+
+   /** Maximum number of pre-allocated message */
+   enum {
+	   MESSAGE_POOL_THRESHOLD = 64
+   };
+
+   /** Stucture used for reporting the internal status of the logger.
+    *
+    */
+   struct Diags {
+	   size_t m_poolSize;
+	   size_t m_maxMsgQueueSize;
+	   size_t m_msgReceived;
+
+	   size_t m_msgsCreated;
+	   size_t m_msgsDiscarded;
+	   size_t m_pendingListeners;
+	   size_t m_activeListeners;
+	   size_t m_enabledListeners;
+   };
+
+   /** A diagnostics function to check for the health of the logger.
+    *
+    * TODO: expand with performance checks.
+    */
+   void getDiags(Diags& diags) noexcept;
+
 private:
 
    void loggingThread() noexcept;
@@ -217,16 +256,14 @@ private:
    void sendMessageToListeners(Message* msg) noexcept;
    void processNewListeners() noexcept;
 
-   static bool
-   checkCategory(std::shared_ptr<std::string>listenerCat, const std::string& msgCat);
-
-   /** Maximum number of pre-allocated message */
-   enum {
-	   MESSAGE_POOL_THRESHOLD = 64
-   };
-
    /* Current log level */
    std::atomic<LEVEL> m_level;
+   std::atomic<size_t> m_unpooled;
+   std::atomic<size_t> m_destroyed;
+   size_t m_maxMsgQueueSize;
+   size_t m_msgReceived;
+
+
    using MessageQueue = std::deque<Message*>;
    MessageQueue m_messages;
    bool m_isTerminated;

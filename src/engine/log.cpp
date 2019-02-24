@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Sat, 23 Feb 2019 12:55:51 +0000
-  Touch : Sun, 24 Feb 2019 09:54:01 +0000
+  Touch : Sun, 24 Feb 2019 12:42:56 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2019 The Falcon Programming Language
@@ -21,7 +21,11 @@ namespace Falcon {
 
 LogSystem::LogSystem(bool startNow):
 		m_logThread(0),
-		m_level(LEVEL::TRACE)
+		m_level(LEVEL::TRACE),
+		m_unpooled(0),
+		m_destroyed(0),
+		m_maxMsgQueueSize(0),
+		m_msgReceived(0)
 {
 	// prepare the pool
 	for (int i = 0; i < MESSAGE_POOL_THRESHOLD; ++i) {
@@ -95,6 +99,9 @@ void LogSystem::log( LogSystem::Message* msg ) noexcept
 {
 	std::lock_guard<std::mutex> guard(m_mtxMessage);
 	m_messages.push_back(msg);
+	if(m_messages.size() > m_maxMsgQueueSize) {
+		m_maxMsgQueueSize = m_messages.size();
+	}
 	m_cvLogs.notify_all();
 }
 
@@ -142,9 +149,8 @@ void LogSystem::loggingThread() noexcept
 {
 	while(true) {
 		std::unique_lock<std::mutex> msgl(m_mtxMessage);
-		msgl.lock();
 		m_cvLogs.wait(msgl, [=](){
-			return ! m_messages.empty() || m_isTerminated;
+			return (!m_messages.empty()) || m_isTerminated;
 			}
 		);
 
@@ -175,18 +181,20 @@ void LogSystem::loggingThread() noexcept
 void LogSystem::processNewListeners() noexcept {
 	{
 		std::lock_guard<std::mutex> guard(m_mtxListeners);
-		std::copy(m_activeListeners.end(), m_pendingListeners.begin(), m_pendingListeners.end());
+		std::copy(m_pendingListeners.begin(), m_pendingListeners.end(),
+				std::back_inserter(m_activeListeners));
 		m_pendingListeners.clear();
 	}
 
 }
 
-void LogSystem::sendMessageToListeners(Message* msg) noexcept {
-	// Perform our loop.
+void LogSystem::sendMessageToListeners(Message* msg) noexcept
+{
+	m_msgReceived++;
 	for(auto listener: m_activeListeners) {
 		if(listener->isEnabled()
-				&& listener->level() <= msg->m_level
-				&& checkCategory(listener->m_category, msg->m_category))
+				&& listener->level() >= msg->m_level
+				&& listener->checkCategory(msg->m_category))
 		{
 			listener->onMessage(*msg);
 		}
@@ -204,6 +212,7 @@ LogSystem::Message* LogSystem::allocateMsg()
 			return msg;
 		}
 	}
+	m_unpooled++;
 	return new Message;
 }
 
@@ -217,8 +226,10 @@ void LogSystem::disposeMsg(Message* msg) noexcept
 			return;
 		}
 	}
+	m_destroyed++;
 	delete msg;
 }
+
 
 void LogSystem::cleanupTerminatedListeners()
 {
@@ -226,9 +237,28 @@ void LogSystem::cleanupTerminatedListeners()
 	      [](auto& listener) { return listener->isDetached(); });
 }
 
-bool LogSystem::checkCategory(std::shared_ptr<std::string>listenerCat, const std::string& msgCat)
+
+void LogSystem::getDiags(LogSystem::Diags& diags) noexcept
 {
-	return msgCat.empty() || *listenerCat == msgCat;
+	diags.m_msgsCreated = m_unpooled;
+	diags.m_msgsDiscarded = m_destroyed;
+	diags.m_activeListeners = m_activeListeners.size();
+	diags.m_enabledListeners = std::count_if(m_activeListeners.begin(), m_activeListeners.end(),
+				[](const auto& l){return l->isEnabled();});
+	diags.m_msgReceived = m_msgReceived;
+
+	{
+		std::lock_guard<std::mutex> guard(m_mtxMessage);
+		diags.m_maxMsgQueueSize = m_maxMsgQueueSize;
+	}
+	{
+		std::lock_guard<std::mutex> guard(m_mtxPool);
+		diags.m_poolSize = m_pool.size();
+	}
+	{
+		std::lock_guard<std::mutex> guard(m_mtxListeners);
+		diags.m_pendingListeners = m_pendingListeners.size();
+	}
 }
 
 }

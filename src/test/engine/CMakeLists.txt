@@ -6,18 +6,19 @@
 #   -------------------------------------------------------------------
 #   Author: Giancarlo Niccolai
 #   Begin : Tue, 09 Jan 2018 14:46:25 +0000
-#   Touch : Sat, 23 Feb 2019 07:15:20 +0000
+#   Touch : Sun, 24 Feb 2019 12:42:56 +0000
 #
 #   -------------------------------------------------------------------
 #   (C) Copyright 2019 The Falcon Programming Language
 #   Released under Apache 2.0 License.
 ##############################################################################
 
-falcon_add_fut( compiler.fut )
-falcon_add_fut( singleton.fut )
+file(GLOB test_files *.fut.cpp)
 
-target_link_libraries(compiler.fut  falcon_engine)
-target_link_libraries(singleton.fut  falcon_engine)
+foreach(file ${test_files})
+	get_filename_component(test_name "${file}" NAME_WE)
+	falcon_add_fut(${test_name}.fut)
+	target_link_libraries(${test_name}.fut falcon_engine)
+endforeach(file)
 
 # end of CMakeLists.txt
-
