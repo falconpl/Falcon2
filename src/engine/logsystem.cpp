@@ -1,6 +1,6 @@
 /*****************************************************************************
   FALCON2 - The Falcon Programming Language
-  FILE: log.cpp
+  FILE: logsystem.cpp
 
   Falcon logging system
   -------------------------------------------------------------------
@@ -13,7 +13,7 @@
   Released under Apache 2.0 License.
 ******************************************************************************/
 
-#include <falcon/log.h>
+#include <falcon/logsystem.h>
 
 #include <algorithm>
 
@@ -263,4 +263,4 @@ void LogSystem::getDiags(LogSystem::Diags& diags) noexcept
 
 }
 
-/* end of log.cpp */
+/* end of logsystem.cpp */

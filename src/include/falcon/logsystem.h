@@ -1,6 +1,6 @@
 /*****************************************************************************
   FALCON2 - The Falcon Programming Language
-  FILE: log.h
+  FILE: logsystem.h
 
   Falcon logging subsystem
   -------------------------------------------------------------------
@@ -13,8 +13,8 @@
   Released under Apache 2.0 License.
 ******************************************************************************/
 
-#ifndef _FALCON_LOG_H_
-#define _FALCON_LOG_H_
+#ifndef _FALCON_LOGSYSTEM_H_
+#define _FALCON_LOGSYSTEM_H_
 
 #include <falcon/setup.h>
 #include <falcon/engine/singleton.h>
@@ -287,6 +287,6 @@ private:
 
 }
 
-#endif /* _FALCON_LOG_H_ */
+#endif /* _FALCON_LOGSYSTEM_H_ */
 
-/* end of log.h */
+/* end of logsystem.h */
