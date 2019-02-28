@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Sun, 24 Feb 2019 10:15:41 +0000
-  Touch : Thu, 28 Feb 2019 20:59:11 +0000
+  Touch : Thu, 28 Feb 2019 22:43:30 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2019 The Falcon Programming Language
@@ -14,10 +14,12 @@
 ******************************************************************************/
 
 #include <falcon/fut/fut.h>
+#include <falcon/logsystem.h>
+
 #include <future>
 #include <iostream>
 #include <memory>
-#include "../../include/falcon/logsystem.h"
+
 
 class TestListener: public Falcon::LogSystem::Listener {
 public:

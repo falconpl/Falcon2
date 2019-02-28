@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Sat, 23 Feb 2019 10:30:32 +0000
-  Touch : Sun, 24 Feb 2019 12:42:56 +0000
+  Touch : Thu, 28 Feb 2019 22:43:30 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2019 The Falcon Programming Language
@@ -17,8 +17,6 @@
 #define _FALCON_LOGSYSTEM_H_
 
 #include <falcon/setup.h>
-#include <falcon/engine/singleton.h>
-
 #include <atomic>
 #include <condition_variable>
 #include <deque>
@@ -27,6 +25,7 @@
 #include <regex>
 #include <string>
 #include <thread>
+#include "singleton.h"
 
 namespace Falcon {
 
@@ -195,10 +194,11 @@ public:
     */
    static const char* levelToString( LEVEL lvl );
 
+   using PListener = std::shared_ptr<Listener>;
    /** Adds a listener for incoming logs.
     * @param l The listener to be added
     */
-   void addListener(std::shared_ptr<Listener> l);
+   void addListener(PListener l);
 
    /**
     * Sets a minimal log level for this listener.
