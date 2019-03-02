@@ -223,7 +223,12 @@ constexpr auto LLTRACE = LogSystem::LEVEL::TRACE;
  * This helps implementing application-level emergency log features.
  *
  * Notice that only one filter created Logger::categoryFilter() will be active at a time.
- * To reset the logger to the previous state, use Logger::clearCategoryFilter()
+ * To reset the logger to the previous state, use Logger::clearFilter().
+ *
+ * @Note: setting the category filter at Logger level is threadsafe with respect to the log
+ * thread, but concurrent usage of the filter set and clear functions from differen threads have
+ * undefined behavior.
+ *
  */
 class Logger: public LogSystem
 {
