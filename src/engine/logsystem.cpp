@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Sat, 23 Feb 2019 12:55:51 +0000
-  Touch : Sun, 24 Feb 2019 12:42:56 +0000
+  Touch : Sat, 02 Mar 2019 01:33:45 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2019 The Falcon Programming Language
@@ -233,8 +233,11 @@ void LogSystem::disposeMsg(Message* msg) noexcept
 
 void LogSystem::cleanupTerminatedListeners()
 {
-	std::remove_if(m_activeListeners.begin(), m_activeListeners.end(),
-	      [](auto& listener) { return listener->isDetached(); });
+	m_activeListeners.erase(
+			std::remove_if(m_activeListeners.begin(), m_activeListeners.end(),
+					[](auto& listener) { return listener->isDetached(); }),
+			m_activeListeners.end());
+
 }
 
 

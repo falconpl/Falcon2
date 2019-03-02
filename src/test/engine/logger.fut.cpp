@@ -6,7 +6,7 @@
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Thu, 28 Feb 2019 22:02:59 +0000
-  Touch : Thu, 28 Feb 2019 22:43:07 +0000
+  Touch : Sat, 02 Mar 2019 01:33:45 +0000
 
   -------------------------------------------------------------------
   (C) Copyright 2019 The Falcon Programming Language
@@ -15,6 +15,8 @@
 
 #include <falcon/fut/fut.h>
 #include <falcon/logger.h>
+
+#include <iostream>
 
 #include <future>
 
@@ -38,6 +40,12 @@ public:
       m_caught = m_catcher->m_msgPromise.get_future();
     }
 
+   void TearDown() {
+	   // Detach the catcher stream, or it will still be there
+	   // the next time we use this fixture!
+	   m_catcher->detach();
+   }
+
    using FutureMessage = std::future<Falcon::LogSystem::Message>;
 
    bool waitResult(FutureMessage& msg) {
@@ -58,10 +66,21 @@ public:
 TEST_F(LoggerTest, Smoke)
 {
    std::ostringstream tempStream;
-   LOG.defaultListener()->setStream(tempStream);
+   LOG.defaultListener()->writeOn(&tempStream);
    LOG << "Hello World";
    waitResult(m_caught);
    EXPECT_NE(tempStream.str().find("Hello World"), std::string::npos);
+}
+
+
+TEST_F(LoggerTest, Category)
+{
+   std::ostringstream tempStream;
+   LOG.defaultListener()->writeOn(&tempStream);
+   LOG.setCategory("The Category");
+   LOG << "Hello World";
+   waitResult(m_caught);
+   EXPECT_NE(tempStream.str().find("The Category"), std::string::npos);
 }
 
 FALCON_TEST_MAIN
