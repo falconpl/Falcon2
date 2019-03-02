@@ -16,6 +16,7 @@
 #include <falcon/logstream.h>
 
 #include <iostream>
+#include <iomanip>
 
 namespace Falcon {
 
@@ -40,19 +41,29 @@ void LogStreamListener::onMessage( const Falcon::LogSystem::Message& msg )
 	std::ostream& out = *m_pout;
 
 	// TODO: use a format to print
-	out << local_tm.tm_year +1900 << '-'
-				<< local_tm.tm_mon + 1 << '-'
-				<< local_tm.tm_mday << ' '
-				<< local_tm.tm_hour << ':'
-				<< local_tm.tm_min  << ':'
-				<< local_tm.tm_sec  << ' ';
+	out
+		<< local_tm.tm_year +1900 << '-'
+		<< std::setfill('0') << std::setw(2)
+		<< local_tm.tm_mon + 1 << '-'
+		<< std::setfill('0') << std::setw(2)
+		<< local_tm.tm_mday << ' '
+		<< std::setfill('0') << std::setw(2)
+		<< local_tm.tm_hour << ':'
+		<< std::setfill('0') << std::setw(2)
+		<< local_tm.tm_min  << ':'
+		<< std::setfill('0') << std::setw(2)
+		<< local_tm.tm_sec  << ' '
+		<< std::setw(0);
 
-	out << file << ':' << msg.m_line
-		<< " [" << LogSystem::levelToString(msg.m_level) << "]";
+	out	<< "[" << LogSystem::levelToString(msg.m_level) << "] ";
 	if(! msg.m_category.empty()) {
-		out << "(" << msg.m_category << ")";
+		out << "(" << msg.m_category << ") ";
 	}
+	out << file << ':' << msg.m_line;
 	out << " " << msg.m_message << "\n";
+
+	// TODO: add a flag to do this optionally
+	out.flush();
 }
 
 }

@@ -25,7 +25,8 @@
 #include <regex>
 #include <string>
 #include <thread>
-#include "singleton.h"
+#include <iostream>
+
 
 namespace Falcon {
 
@@ -124,7 +125,6 @@ public:
     	  return m_category;
       }
 
-
       virtual void enable(bool mode) {
     	  m_enabled = mode;
       }
@@ -149,16 +149,7 @@ public:
 
       bool isDetached() const noexcept {return m_detached;}
 
-      bool checkCategory(const std::string& cat) const noexcept {
-    	  if(cat == "") return true;
-    	  std::lock_guard<std::mutex> guard(m_mtxCategory);
-    	  if(m_category == "") {
-    		  return true;
-    	  }
-    	  return std::regex_match(cat.begin(), cat.end(), m_catRegex);
-      }
-
-   protected:
+      bool checkCategory(const std::string& cat) const noexcept;
       virtual void onMessage( const Message& msg ) = 0;
 
    private:
@@ -212,7 +203,7 @@ public:
    void level(LEVEL l) noexcept {m_level = l;}
 
    /** Get the current minimum log level */
-   LEVEL level() const noexcept { return m_level;}
+   LEVEL level() const noexcept {return m_level;}
 
    /** Starts the service */
    void start();

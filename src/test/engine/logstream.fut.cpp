@@ -28,7 +28,6 @@ class TestListener: public Falcon::LogSystem::Listener {
 public:
 	std::promise<Falcon::LogSystem::Message> m_msgPromise;
 
-protected:
     virtual void onMessage( const Falcon::LogSystem::Message& msg ) override{
     	m_msgPromise.set_value(msg);
     }

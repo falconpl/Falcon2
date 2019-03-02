@@ -14,6 +14,7 @@
 ******************************************************************************/
 
 #include <falcon/logger.h>
+#include <iostream>
 
 namespace Falcon {
 
@@ -23,6 +24,32 @@ thread_local std::string Logger::m_msgFile{""};
 thread_local int Logger::m_msgLine{0};
 thread_local LOGLEVEL Logger::m_msgLevel{LLTRACE};
 
+Logger::Logger()
+{
+	m_dflt = std::make_shared<LogStreamListener>();
+	addListener(m_dflt);
+}
+
+
+void Logger::categoryFilter(const std::string& category, LOGLEVEL l) {
+	if (m_proxy.get()) {
+		m_proxy->detach();
+	}
+	m_proxyBaseLevel = level();
+	if(l > m_proxyBaseLevel) {
+		level(l);
+	}
+	m_proxy = std::make_shared<LogProxyListener>(m_dflt);
+	m_proxy->category(category);
+	m_proxy->level(l);
+	addListener(m_proxy);
+}
+
+
+void Logger::clearFilter() {
+	m_proxy->detach();
+	level(m_proxyBaseLevel);
+}
 
 }
 

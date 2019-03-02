@@ -60,13 +60,9 @@ public:
 		m_pout = out;
 	}
 
-protected:
     virtual void onMessage( const Falcon::LogSystem::Message& msg ) override;
 
 private:
-    void clearStream() {
-
-    }
 
     // Initialise the output to sink
     NullBuffer m_nullBuffer;

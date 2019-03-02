@@ -14,7 +14,6 @@
 ******************************************************************************/
 
 #include <falcon/logsystem.h>
-
 #include <algorithm>
 
 namespace Falcon {
@@ -166,11 +165,11 @@ void LogSystem::loggingThread() noexcept
 		// Do we need to add new listeners?
 		processNewListeners();
 
-		// ... or remove the dead ones?
-		cleanupTerminatedListeners();
-
 		// Now send the message
 		sendMessageToListeners(msg);
+
+		// ... or remove the dead ones?
+		cleanupTerminatedListeners();
 
 		// give back to the pool
 		disposeMsg(msg);
@@ -200,6 +199,18 @@ void LogSystem::sendMessageToListeners(Message* msg) noexcept
 		}
 	}
 }
+
+bool LogSystem::Listener::checkCategory(const std::string& cat) const noexcept
+{
+	  if(cat == "") return true;
+	  std::lock_guard<std::mutex> guard(m_mtxCategory);
+	  if(m_category == "") {
+		  return true;
+	  }
+	  std::cout << "Category filtering: " << cat <<" vs. "<< m_category << ": " << std::regex_match(cat, m_catRegex)<<  '\n';
+	  return std::regex_match(cat, m_catRegex);
+  }
+
 
 
 LogSystem::Message* LogSystem::allocateMsg()

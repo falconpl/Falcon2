@@ -23,10 +23,13 @@
 class TestListener: public Falcon::LogSystem::Listener {
 public:
 	std::promise<Falcon::LogSystem::Message> m_msgPromise;
+	int m_expected{1};
 
 protected:
     virtual void onMessage( const Falcon::LogSystem::Message& msg ) override{
-    	m_msgPromise.set_value(msg);
+    	if (--m_expected == 0) {
+    		m_msgPromise.set_value(msg);
+    	}
     }
 };
 
@@ -35,11 +38,18 @@ class LoggerTest: public Falcon::testing::TestCase
 {
 public:
    void SetUp() {
-      m_catcher = std::make_shared<TestListener>();
-      LOGGER.addListener(m_catcher);
-      LOGGER.defaultListener()->writeOn(&m_sstream);
-      m_caught = m_catcher->m_msgPromise.get_future();
-    }
+	   resetCatcher();
+       LOGGER.defaultListener()->writeOn(&m_sstream);
+   }
+
+   void resetCatcher() {
+	   if(m_catcher.get()) {
+		   m_catcher->detach();
+	   }
+	   m_catcher = std::make_shared<TestListener>();
+	   m_caught = m_catcher->m_msgPromise.get_future();
+	   LOGGER.addListener(m_catcher);
+   }
 
    void TearDown() {
 	   // Detach the catcher stream, or it will still be there
@@ -56,6 +66,18 @@ public:
 	   		return false;
 	   }
 	   return true;
+   }
+
+   bool same_line(const std::string& lines, const std::string& one, const std::string& two) {
+	   std::stringstream ss(lines);
+	   std::string to;
+
+	   while(std::getline(ss, to, '\n')){
+		   if(to.find(one) != std::string::npos && to.find(two) != std::string::npos) {
+			   return true;
+		   }
+	   }
+	   return false;
    }
 
    std::shared_ptr<TestListener> m_catcher;
@@ -98,8 +120,43 @@ TEST_F(LoggerTest, LogBlock)
 	   LOGGER << " world";
    }
    waitResult(m_caught);
-   std::cout << m_sstream.str();
    EXPECT_NE(m_sstream.str().find("Hello partial world"), std::string::npos);
+}
+
+
+TEST_F(LoggerTest, CategoryFilter)
+{
+	// We need to wait for 4 log lines in this test
+	m_catcher->m_expected = 3;
+	// we should not receive anything under info
+	LOGGER.level(Falcon::LLINFO);
+	LOGGER.defaultListener()->level(Falcon::LLINFO);
+	LOGGER.categoryFilter(".*::INTERNAL", Falcon::LLTRACE);
+
+    LOG_CATEGORY("Test::BASE");
+	LOG_INFO << "Line INFO";
+	LOG_TRC << "Line TRACE";
+
+	LOG_CATEGORY("Test::INTERNAL");
+	LOG_TRC << "Line INTERNAL";
+
+	waitResult(m_caught);
+	resetCatcher();
+
+	LOGGER.clearFilter();
+	LOGGER.level(Falcon::LLTRACE);
+	LOG_TRC << "Line FINAL";
+	waitResult(m_caught);
+
+	std::cout << m_sstream.str();
+	// Line INFO must be in the same line of Test::BASE
+	// Line TRACE is expected not to be printed
+	// Line INTERNAL is expected on Test::INTERNAL to be received.
+	// Line FINAL should be not received.
+	EXPECT_TRUE(same_line(m_sstream.str(), "Test::BASE", "Line INFO"));
+	EXPECT_FALSE(same_line(m_sstream.str(), "Test::BASE", "Line TRACE"));
+	EXPECT_TRUE(same_line(m_sstream.str(), "Test::INTERNAL", "Line INTERNAL"));
+	EXPECT_FALSE(same_line(m_sstream.str(), "Test::INTERNAL", "Line FINAL"));
 }
 
 FALCON_TEST_MAIN
