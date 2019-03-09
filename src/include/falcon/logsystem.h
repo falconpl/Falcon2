@@ -84,6 +84,18 @@ public:
 	   std::string m_category;
 	   std::string m_message;
    };
+   /**
+    * Class thrown when an invalid category is thrown
+    */
+
+   class InvalidCategory: public std::runtime_error
+   {
+   public:
+	   InvalidCategory()=default;
+	   InvalidCategory(const char* what):
+		   std::runtime_error(what)
+	   {}
+   };
 
    /**
     * Listener base class.
@@ -107,14 +119,19 @@ public:
       /**
        * Filter for categories. Leave empty to accept all categories.
        *
-       * Will throw if the regular expression is not valid.
+       * Will throw InvalidCategory if the regular expression is not valid.
        */
       void category( const std::string& regex_cat )
       {
     	  std::lock_guard<std::mutex> guard(m_mtxCategory);
     	  // may throw in case of error
-    	  m_catRegex = std::regex(regex_cat);
-    	  m_category = regex_cat;
+    	  try{
+			  m_catRegex = std::regex(regex_cat);
+			  m_category = regex_cat;
+    	  }
+    	  catch(const std::runtime_error& err) {
+    		  throw InvalidCategory(err.what());
+    	  }
       }
 
       /**

@@ -19,6 +19,8 @@
 #include <future>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
+
 
 
 class TestListener: public Falcon::LogSystem::Listener {
@@ -124,6 +126,12 @@ TEST_F(LogTest, ReceiveMessage) {
 	}
 }
 
+TEST_F(LogTest, ThrowCategory) {
+	EXPECT_THROW(
+			m_listener->category("*"),
+			Falcon::LogSystem::InvalidCategory
+	);
+}
 
 TEST_F(LogTest, DiscardLevel) {
 	// We now check that a listener is not sent messages
