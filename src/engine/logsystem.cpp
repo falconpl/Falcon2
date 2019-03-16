@@ -177,14 +177,12 @@ void LogSystem::loggingThread() noexcept
 }
 
 
-void LogSystem::processNewListeners() noexcept {
-	{
-		std::lock_guard<std::mutex> guard(m_mtxListeners);
-		std::copy(m_pendingListeners.begin(), m_pendingListeners.end(),
-				std::back_inserter(m_activeListeners));
-		m_pendingListeners.clear();
-	}
-
+void LogSystem::processNewListeners() noexcept
+{
+	std::lock_guard<std::mutex> guard(m_mtxListeners);
+	std::copy(m_pendingListeners.begin(), m_pendingListeners.end(),
+			std::back_inserter(m_activeListeners));
+	m_pendingListeners.clear();
 }
 
 void LogSystem::sendMessageToListeners(Message* msg) noexcept
