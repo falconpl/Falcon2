@@ -20,7 +20,7 @@
 namespace Falcon {
 
 /**
- * Specialized String for Falcon.
+ * Specialised String for Falcon.
  *
  * Currently, it's a std::string. It is meant to implement transparently some
  * special features of Falcon strings, while providing full compatibility with
@@ -51,6 +51,11 @@ class String: public std::string {
 	bool operator <(const String& other) const noexcept {return str() < other.str(); }
 
 };
+
+std::ostream& operator <<(std::ostream out, String& render) {
+	out << render.str();
+	return out;
+}
 
 }
 

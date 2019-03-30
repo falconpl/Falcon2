@@ -21,8 +21,7 @@ namespace Falcon {
 
 void IHandler::addMessage(const std::string& msg, IHandler::MessageHandler mh) noexcept
 {
-	LOG_CATEGORY("M+ENG");
-	LOG_TRC << this << "->" << "addMessage(" << msg << ", " << mh << ")";
+	LOG_TRC << LOG_CAT("M+ENG") << this << "->" << "addMessage(" << msg << ", " << mh << ")";
 
 	if(!m_messageMap.insert(std::make_pair(msg, mh)).second){
 		LOG_DBG << "addMessage: substituting " << msg << " with " << mh;
@@ -33,16 +32,14 @@ void IHandler::addMessage(const std::string& msg, IHandler::MessageHandler mh) n
 
 void IHandler::delMessage(const std::string& msg) noexcept
 {
-	LOG_CATEGORY("M+ENG");
-	LOG_TRC << this << "->" << "delMessage(" << msg << ")";
+	LOG_TRC << LOG_CAT("M+ENG") << this << "->" << "delMessage(" << msg << ")";
 
 	m_messageMap.erase(msg);
 }
 
 void IHandler::propertyDispatcher(const std::string& msg, VMContext& ctx)
 {
-	LOG_CATEGORY("M+ENG");
-	LOG_TRC << this << "->" << "propertyDispatcher(" << msg << ", " << ctx << ", " << ") ";
+	LOG_TRC << LOG_CAT("M+ENG") << this << "->" << "propertyDispatcher(" << msg << ", " << ctx << ", " << ") ";
 	Item prop;
 
 	if(getProperty(ctx.self(), msg, prop)) {
@@ -52,16 +49,14 @@ void IHandler::propertyDispatcher(const std::string& msg, VMContext& ctx)
 
 bool IHandler::sendMessage(const std::string& msg, VMContext& ctx) noexcept
 {
-	LOG_CATEGORY("M+ENG");
-
 	MessageMap::const_iterator pos = m_messageMap.find(msg);
 	if (pos != m_messageMap.end()) {
-		LOG_TRC << "sendMessage(" << msg << ", " << ctx << ") to " << pos->second;
+		LOG_TRC << LOG_CAT("M+ENG") << "sendMessage(" << msg << ", " << ctx << ") to " << pos->second;
 		pos->second(msg, ctx);
 		return true;
 	}
 
-	LOG_TRC << this << "->" << "sendMessage(" << msg << ", " << ctx ") to default ";
+	LOG_TRC << LOG_CAT("M+ENG") << this << "->" << "sendMessage(" << msg << ", " << ctx ") to default ";
 	return m_defaultHandler(msg, ctx);
 }
 

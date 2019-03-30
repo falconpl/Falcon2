@@ -83,40 +83,135 @@ public:
 		return "Undefined";
 	}
 
-	using MsgHandlerCB = bool *(Item& self, const String& message, VMContext& ctx);
 
-	struct MsgHandler {
+
+	using MsgHandlerCB = bool (*)(const String& message, Item& self, VMContext& ctx);
+
+	class MsgHandler {
 	public:
-		MsgHandlerCB setp;
-		MsgHandlerCB getp;
-		MsgHandlerCB send;
+		MsgHandler() = default;
+		MsgHandler(const MsgHandler& ) = default;
+		MsgHandler(MsgHandler&& ) = default;
+		~MsgHandler() = default;
+
+		MsgHandler(MsgHandlerCB setp, MsgHandlerCB getp, MsgHandlerCB send):
+			m_setp{setp}, m_getp{getp}, m_send{send}
+			{}
+
+		using Ptr = std::shared_ptr<MsgHandler>;
+
+		const MsgHandlerCB& setp() const noexcept { return m_setp; }
+		const MsgHandlerCB& getp() const noexcept { return m_setp; }
+		const MsgHandlerCB& send() const noexcept { return m_setp; }
+
+	private:
+		MsgHandlerCB m_setp{nullptr};
+		MsgHandlerCB m_getp{nullptr};
+		MsgHandlerCB m_send{nullptr};
 	};
 
-	using MsgHandlerPtr = std::shared_ptr<MsgHandler>;
 
-	struct Delegate {
+	class Delegate {
 	public:
-		Item target;
-		MsgHandlerPtr msgh;
+		Delegate() = default;
+		Delegate(const Delegate&) = default;
+		Delegate(Delegate&&) = default;
+		~Delegate() = default;
+
+
+		Delegate(const Item& item, MsgHandler::Ptr msgh ):
+			m_target(item), m_msgh(msgh)
+		{}
+
+		using Ptr = std::shared_ptr<Delegate>;
+
+		const Item& target() const noexcept {return m_target;}
+		const MsgHandler::Ptr& msgh() const noexcept {return m_msgh;}
+
+	private:
+		Item m_target;
+		MsgHandler::Ptr m_msgh;
 	};
-	using DelegatePtr = std::shared_ptr<Delegate>;
 
-	struct MessageMapEntry {
-		DelegatePtr delegate;
-		MsgHandlerPtr msgh;
 
-		MessageMapEntry() = default;
-		MessageMapEntry(const MessageMapEntry&) = default;
-		MessageMapEntry(MessageMapEntry&&) = default;
+	class MsgMapEntry {
+	public:
+		// We want the message callback pointer to be valid,
+		// even if we don't have callbacks
+		MsgMapEntry(): m_msgh(std::make_shared<MsgHandler>()) {}
 
+		MsgMapEntry(const MsgMapEntry&) = default;
+		MsgMapEntry(MsgMapEntry&&) = default;
+		~MsgMapEntry() = default;
+
+		MsgMapEntry(MsgHandler::Ptr msgh): m_msgh(msgh) {}
+		MsgMapEntry(MsgHandler::Ptr msgh, Delegate::Ptr delegate): m_msgh(msgh), m_delegate(delegate) {}
+		MsgMapEntry(MsgHandlerCB getp, MsgHandlerCB setp, MsgHandlerCB call):
+			m_msgh(std::make_shared<MsgHandler>(getp, setp, call))
+		{}
+		MsgMapEntry(MsgHandlerCB getp, MsgHandlerCB setp, MsgHandlerCB call, Delegate::Ptr delegate):
+					m_msgh(std::make_shared<MsgHandler>(getp, setp, call)),
+					m_delegate(delegate)
+		{}
+
+		const MsgHandler::Ptr& msgh() const noexcept { return m_msgh;}
+		const Delegate::Ptr& delegate() const noexcept { return m_msgh;}
+
+	private:
+		MsgHandler::Ptr	m_msgh;
+		Delegate::Ptr m_delegate;
 
 	};
 
-	using MessageMap = std::unordered_map<String, MsgHandler>;
+	using MessageMap = std::unordered_map<String, MsgMapEntry>;
 
-	void addMessage(const String& msg, MsgHandler mh) noexcept;
-	bool delMessage(const String& msg) noexcept;
-	bool hasMessage(const String& msg) noexcept;
+	void addMessage(const String& msg, MsgHandler::Ptr mh) noexcept;
+	bool delMessage(const String& msg) const noexcept;
+
+	bool hasMessage(const String& msg) const noexcept
+	{
+		MessageMap::const_iterator pos{m_messageMap.find(msg)};
+		return pos != m_messageMap.end();
+	}
+
+	bool hasSend(const String& msg) const noexcept {
+		MessageMap::const_iterator pos{m_messageMap.find(msg)};
+		return pos != m_messageMap.end() && pos->second.msgh()->send() != nullptr;
+	}
+
+	bool hasGetp(const String& msg) const noexcept {
+		MessageMap::const_iterator pos{m_messageMap.find(msg)};
+		return pos != m_messageMap.end() && pos->second.msgh()->getp() != nullptr;
+	}
+
+	bool hasSetp(const String& msg) const noexcept {
+		MessageMap::const_iterator pos{m_messageMap.find(msg)};
+		return pos != m_messageMap.end() && pos->second.msgh()->setp() != nullptr;
+	}
+
+	bool hasDelegate(const String& msg) const noexcept {
+		MessageMap::const_iterator pos{m_messageMap.find(msg)};
+		return pos != m_messageMap.end() && pos->second.delegate().get() != nullptr;
+	}
+
+	//const MessageMap& messages() const noexcept {return m_messageMap;}
+
+	void setDefaultHandler(MsgHandler::Ptr mh) noexcept {
+		m_defaultHandler = mh;
+	}
+
+	void setDefaultHandler(MsgHandlerCB getp, MsgHandlerCB setp, MsgHandlerCB send) noexcept {
+		m_defaultHandler = std::make_shared<MsgHandler>(getp, setp, send);
+	}
+
+	const MsgHandler& getDefaultHandler() const noexcept {
+		return m_defaultHandler;
+	}
+
+	void clearDefaultHandler() noexcept {
+		m_defaultHandler.reset();
+	}
+
 	/**
 	 * Send a message to the handler.
 	 *
@@ -127,26 +222,45 @@ public:
 	 * leave the return value on the VM stack.
 	 *
 	 * @param msg The name of the message to be sent
+	 * @param self The object receiving the message (might be different from VMcontext:self()).
 	 * @param ctx The VMContext where the execution takes place
 	 *
 	 */
-	bool sendMessage(const String& msg, VMContext& ctx) noexcept;
-	const MessageMap& messages() const noexcept {return m_messageMap;}
+	void sendMessage(const String& msg, Item& self, VMContext& ctx) const noexcept;
 
-	void setDefaultHandler(MsgHandler mh) noexcept {
-		m_defaultHandler = mh;
-	}
+	/**
+	 * Gets a property from self a message to the handler.
+	 *
+	 * On success, the value of the property must be pushed on top of the data stack,
+	 * or the context must be modified in order to access the property at a later time.
+	 *
+	 * On failure, the handle must raise the property exception in the context.
+	 *
+	 * @param msg The name of the message to be sent
+	 * @param self The object receiving the message (might be different from VMcontext:self()).
+	 * @param ctx The VMContext where the execution takes place
+	 *
+	 */
+	void getProperty(const String& msg, Item& self, VMContext& ctx) const noexcept;
 
-	MsgHandler getDefaultHandler() const noexcept {
-		return m_defaultHandler;
-	}
-
-	void clearDefaultHandler() noexcept {
-		m_defaultHandler = propertyDispatcher;
-	}
+	/**
+	 * Sets a property from self a message to the handler.
+	 *
+	 * On success, the value of the result of the operation (the value of the property)
+	 * must be pushed on top of the data stack,
+	 * or the context must be modified in order to access the property at a later time.
+	 *
+	 * On failure, the handle must raise the propert exception in the context.
+	 *
+	 * @param msg The name of the property (message) to be modified.
+	 * @param self The object receiving the message (might be different from VMcontext:self()).
+	 * @param value The value to be set as the property value.
+	 * @param ctx The VMContext where the execution takes place
+	 *
+	 */
+	void setProperty(const String& msg, Item& self, Item& value, VMContext& ctx) const noexcept;
 
 protected:
-	static bool propertyDispatcher(Item& target, const String& msg, VMContext& ctx);
 
 	IHandler(const String& name="Undefined", e_type type=type_undefined):
 		m_name(name),
@@ -160,7 +274,7 @@ private:
 	using MessageMap = std::unordered_map<String, MsgHandler>;
 	MessageMap m_messageMap;
 
-	MsgHandler m_defaultHandler{propertyDispatcher};
+	MsgHandler::Ptr m_defaultHandler;
 };
 
 }
