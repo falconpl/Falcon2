@@ -19,6 +19,7 @@
 namespace Falcon {
 
 thread_local std::string Logger::m_category{""};
+thread_local std::string Logger::m_tempCategory{""};
 thread_local std::ostringstream Logger::m_composer;
 thread_local std::string Logger::m_msgFile{""};
 thread_local int Logger::m_msgLine{0};
