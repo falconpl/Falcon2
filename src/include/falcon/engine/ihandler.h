@@ -166,7 +166,21 @@ public:
 	using MessageMap = std::unordered_map<String, MsgMapEntry>;
 
 	void addMessage(const String& msg, MsgHandler::Ptr mh) noexcept;
-	bool delMessage(const String& msg) const noexcept;
+	void addMessage(const String& msg, MsgHandlerCB getp,  MsgHandlerCB setp,  MsgHandlerCB send) noexcept
+	{
+		addMessage(msg, std::make_shared<MsgHandler>(getp, setp, send));
+	}
+
+	void addMessage(const String& msg, MsgHandler::Ptr mh, Delegate::Ptr delegate) noexcept;
+
+	void addMessage(const String& msg, MsgHandlerCB getp,  MsgHandlerCB setp,  MsgHandlerCB send, Delegate::Ptr delegate) noexcept
+	{
+		addMessage(msg, std::make_shared<MsgHandler>(getp, setp, send), delegate);
+	}
+
+	bool delegate(const String& msg, Delegate::Ptr delegate) noexcept;
+	bool clearDelegate(const String& msg) noexcept;
+	bool delMessage(const String& msg) noexcept;
 
 	bool hasMessage(const String& msg) const noexcept
 	{
@@ -204,13 +218,24 @@ public:
 		m_defaultHandler = std::make_shared<MsgHandler>(getp, setp, send);
 	}
 
-	const MsgHandler& getDefaultHandler() const noexcept {
-		return m_defaultHandler;
+	MsgHandler* getDefaultHandler() const noexcept {
+		return m_defaultHandler.get();
 	}
 
 	void clearDefaultHandler() noexcept {
 		m_defaultHandler.reset();
 	}
+
+	void setDefaultDelegate(Delegate::Ptr mh) noexcept;
+
+	Delegate* getDefaultDelegate() const noexcept {
+		return m_defaultDelegate.get();
+	}
+
+	void clearDefaultDelegate() noexcept {
+		m_defaultDelegate.reset();
+	}
+
 
 	/**
 	 * Send a message to the handler.
@@ -275,6 +300,13 @@ private:
 	MessageMap m_messageMap;
 
 	MsgHandler::Ptr m_defaultHandler;
+	Delegate::Ptr m_defaultDelegate;
+
+	bool checkCircularDelegate(const Delegate* delegate) const noexcept {
+		return IHandler::checkCircularDelegate(delegate, this);
+	}
+
+	static bool checkCircularDelegate(const Delegate* delegate, const IHandler* origin);
 };
 
 }
