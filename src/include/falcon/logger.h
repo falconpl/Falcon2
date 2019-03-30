@@ -211,7 +211,23 @@ constexpr auto LLTRACE = LogSystem::LEVEL::TRACE;
  *
  * @NOTE: Changing the log category filter is threadsafe operation.
  *
- * @subsection Logger_category_help Logger category filter helper.
+ * @subsection Logger_category_temp Temporary Category
+ *
+ * At times it's useful to override the default category for the file, code area, section etc.
+ * for a single message only.
+ *
+ * The manipulator msg_cat(), proxied with the macro LOG_CAT() serves the purpose.
+ * @code
+ * // Sets the default category
+ * LOG_CATEGORY("Default");
+ * // This message has a special category
+ * LOG_TRACE << LOG_CAT("EXEC") << "A trace message in the EXEC category";
+ * // the message-specific category is reset.
+ * LOG_INFO << "A message in the Default category";
+ * @endcode
+ *
+ *
+ * @subsection Logger_category_help Logger category filter helper
  *
  * The method Logger::filterCategory() performs an operation similar to the one shown above:
  *
@@ -249,13 +265,23 @@ public:
 		m_category = category;
 	}
 
+	void setTempCategory(const std::string& category) noexcept {
+		m_tempCategory = category;
+	}
+
 	const std::string& getCategory() const noexcept {
 		return m_category;
 	}
 
 	void commit()
 	{
-		log(m_msgFile, m_msgLine, m_msgLevel, m_category, m_composer.str());
+		if(m_tempCategory.empty()) {
+			log(m_msgFile, m_msgLine, m_msgLevel, m_category, m_composer.str());
+		}
+		else {
+			log(m_msgFile, m_msgLine, m_msgLevel, m_tempCategory, m_composer.str());
+			m_tempCategory.clear();
+		}
 		readyStream();
 	}
 
@@ -278,6 +304,7 @@ public:
 	{
 	private:
 	    Logger* m_obj;
+	    std::string m_category;
 
 	public:
 	    explicit AutoEnd (Logger& obj, const std::string& file, int line, LOGLEVEL lvl):
@@ -323,6 +350,26 @@ public:
 		return *this;
 	}
 
+
+	struct category_manipulator {
+		category_manipulator(const std::string& cat):
+			m_cat{cat}
+		{}
+		std::string m_cat;
+	};
+
+	/**
+	 * Stream-log style manipulator for temporary (message scoped) category.
+	 *
+	 * Usage: LOG_INFO << msg_cat("a category") << 1 << 2 << 3;
+	 *
+	 * The macro LOG_CAT() is provided for abbreviation.
+	 */
+	static category_manipulator msg_cat(const std::string& category)
+	{
+		return category_manipulator(category);
+	}
+
 private:
 	std::shared_ptr<LogStreamListener> m_dflt;
 	std::shared_ptr<LogProxyListener> m_proxy;
@@ -330,6 +377,7 @@ private:
 
 	static thread_local std::ostringstream m_composer;
 	static thread_local std::string m_category;
+	static thread_local std::string m_tempCategory;
 	static thread_local std::string m_msgFile;
 	static thread_local int m_msgLine;
 	static thread_local LOGLEVEL m_msgLevel;
@@ -340,13 +388,22 @@ private:
 	}
 };
 
+
 template <typename T>
-const Logger::AutoEnd& operator << (const Logger::AutoEnd& ae, T&& arg)
+const Logger::AutoEnd& operator << (const Logger::AutoEnd& aes, T&& arg)
 {
-	if (ae.doLog()) {
-		ae.obj() << std::forward<T>(arg);
+	if (aes.doLog()) {
+		aes.obj() << std::forward<T>(arg);
 	}
-    return ae;
+    return aes;
+}
+
+const Logger::AutoEnd& operator<<(const Logger::AutoEnd&& aes, Logger::category_manipulator&& cat)
+{
+    if(aes.doLog()) {
+    	aes.obj().setTempCategory(cat.m_cat);
+    }
+    return aes;
 }
 
 #define LOGGER (::Falcon::Logger::instance())
@@ -359,6 +416,7 @@ const Logger::AutoEnd& operator << (const Logger::AutoEnd& ae, T&& arg)
 #define LOG_INFO LOG(::Falcon::LLINFO)
 #define LOG_DBG  LOG(::Falcon::LLDEBUG)
 #define LOG_TRC  LOG(::Falcon::LLTRACE)
+#define LOG_CAT  ::Falcon::Logger::msg_cat
 
 #define LOG_BLOCK(lvl) \
 	for( ::Falcon::Logger::BlockEnd __ender(LOGGER, __FILE__, __LINE__, lvl); \

@@ -111,6 +111,36 @@ TEST_F(LoggerTest, Category)
    EXPECT_NE(m_sstream.str().find("The Category"), std::string::npos);
 }
 
+TEST_F(LoggerTest, TempCategory)
+{
+   // We expect TempCat to be before One, and Final Category after One.
+	// Be sure not to break searches.
+   LOG_CATEGORY("Cat");
+   LOG_INFO << LOG_CAT("Temp") << "One";
+   LOG_INFO << "Two";
+
+   waitResult(m_caught);
+
+   const std::string& str = m_sstream.str();
+   std::string::size_type posCat{str.find("Cat")},
+   	   posTempCat{str.find("Temp")},
+	   posOne{str.find("One")},
+	   rposTemp{str.rfind("Temp")};
+
+	// Initial sanity check
+    EXPECT_NE(std::string::npos, posCat);
+    EXPECT_NE(std::string::npos, posTempCat);
+    EXPECT_NE(std::string::npos, posOne);
+    EXPECT_NE(std::string::npos, rposTemp);
+
+    // We want only one TEMP and one CAT in the log
+    EXPECT_EQ(rposTemp, posTempCat);
+
+    EXPECT_LT(posTempCat, posOne);
+    EXPECT_LT(posTempCat, posCat);
+    EXPECT_LT(posOne, posCat);
+}
+
 
 TEST_F(LoggerTest, LogBlock)
 {
