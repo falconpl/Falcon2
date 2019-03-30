@@ -211,7 +211,23 @@ constexpr auto LLTRACE = LogSystem::LEVEL::TRACE;
  *
  * @NOTE: Changing the log category filter is threadsafe operation.
  *
- * @subsection Logger_category_help Logger category filter helper.
+ * @subsection Logger_category_temp Temporary Category
+ *
+ * At times it's useful to override the default category for the file, code area, section etc.
+ * for a single message only.
+ *
+ * The manipulator msg_cat(), proxied with the macro LOG_CAT() serves the purpose.
+ * @code
+ * // Sets the default category
+ * LOG_CATEGORY("Default");
+ * // This message has a special category
+ * LOG_TRACE << LOG_CAT("EXEC") << "A trace message in the EXEC category";
+ * // the message-specific category is reset.
+ * LOG_INFO << "A message in the Default category";
+ * @endcode
+ *
+ *
+ * @subsection Logger_category_help Logger category filter helper
  *
  * The method Logger::filterCategory() performs an operation similar to the one shown above:
  *
