@@ -16,10 +16,11 @@
 #ifndef _FALCON_IHANDLER_H_
 #define _FALCON_IHANDLER_H_
 
-#include <string>
+#include <memory>
 #include <unordered_map>
 
 #include <falcon/setup.h>
+#include <falcon/string.h>
 #include <falcon/types.h>
 
 namespace Falcon {
@@ -53,64 +54,113 @@ public:
 		type_user
 	};
 
-	const std::string& name() const {return m_name;}
-	const e_type type() const {return m_type;}
+	const String& name() const noexcept {return m_name;}
+	const e_type type() const noexcept {return m_type;}
 
-	virtual void create(Item& target, void* params=nullptr) const=0;
-	virtual void destroy(Item& target) const
+	virtual void create(Item& target, void* params=nullptr) const noexcept =0;
+	virtual void destroy(Item& target) const noexcept
 	{
 		// By default, do nothing.
 	}
 
-	virtual bool toBool(const Item& target) const
+	virtual bool toBool(const Item& target) const noexcept
 	{
 		return false;
 	}
 
-	virtual int64 toInteger(const Item& target) const
+	virtual int64 toInteger(const Item& target) const noexcept
 	{
 		return 0L;
 	}
 
-	virtual double toDouble(const Item& target) const
+	virtual double toDouble(const Item& target) const noexcept
 	{
 		return 0.0;
 	}
 
-	virtual std::string toString(const Item& target) const
+	virtual String toString(const Item& target) const noexcept
 	{
 		return "Undefined";
 	}
 
-	using MessageHandler = void *(const std::string& msg, VMContext& ctx, int nparams);
-	using MessageMap = std::unordered_map<std::string, MessageHandler>;
+	using MsgHandlerCB = bool *(Item& self, const String& message, VMContext& ctx);
 
-	void addMessage(const std::string& msg, MessageHandler mh);
-	void delMessage(const std::string& msg);
-	void sendMessage(const std::string& msg, VMContext& ctx, int nparams);
-	const MessageMap& messages() const {return m_messageMap;}
+	struct MsgHandler {
+	public:
+		MsgHandlerCB setp;
+		MsgHandlerCB getp;
+		MsgHandlerCB send;
+	};
 
-	virtual bool getProperty(Item& self, const std::string& property, Item& target) const {
-		return false;
+	using MsgHandlerPtr = std::shared_ptr<MsgHandler>;
+
+	struct Delegate {
+	public:
+		Item target;
+		MsgHandlerPtr msgh;
+	};
+	using DelegatePtr = std::shared_ptr<Delegate>;
+
+	struct MessageMapEntry {
+		DelegatePtr delegate;
+		MsgHandlerPtr msgh;
+
+		MessageMapEntry() = default;
+		MessageMapEntry(const MessageMapEntry&) = default;
+		MessageMapEntry(MessageMapEntry&&) = default;
+
+
+	};
+
+	using MessageMap = std::unordered_map<String, MsgHandler>;
+
+	void addMessage(const String& msg, MsgHandler mh) noexcept;
+	bool delMessage(const String& msg) noexcept;
+	bool hasMessage(const String& msg) noexcept;
+	/**
+	 * Send a message to the handler.
+	 *
+	 * The Handler will prepare the context so to instruct the VM to
+	 * execute the necessary code.
+	 *
+	 * The handler might also perform the required operation immediately and
+	 * leave the return value on the VM stack.
+	 *
+	 * @param msg The name of the message to be sent
+	 * @param ctx The VMContext where the execution takes place
+	 *
+	 */
+	bool sendMessage(const String& msg, VMContext& ctx) noexcept;
+	const MessageMap& messages() const noexcept {return m_messageMap;}
+
+	void setDefaultHandler(MsgHandler mh) noexcept {
+		m_defaultHandler = mh;
 	}
 
-	virtual bool setProperty(Item& self, const std::string& property, Item& source) const {
-		return false;
+	MsgHandler getDefaultHandler() const noexcept {
+		return m_defaultHandler;
 	}
 
+	void clearDefaultHandler() noexcept {
+		m_defaultHandler = propertyDispatcher;
+	}
 
 protected:
-	IHandler(const std::string& name="Undefined", e_type type=type_undefined):
+	static bool propertyDispatcher(Item& target, const String& msg, VMContext& ctx);
+
+	IHandler(const String& name="Undefined", e_type type=type_undefined):
 		m_name(name),
 		m_type(type)
 	{}
 	virtual ~IHandler() = default;
 
 private:
-	std::string m_name;
+	String m_name;
 	e_type m_type;
-	using MessageMap = std::unordered_map<std::string, MessageHandler>;
+	using MessageMap = std::unordered_map<String, MsgHandler>;
 	MessageMap m_messageMap;
+
+	MsgHandler m_defaultHandler{propertyDispatcher};
 };
 
 }
