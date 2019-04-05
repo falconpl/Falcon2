@@ -18,24 +18,22 @@
 
 #include <memory>
 #include <unordered_map>
+#include <variant>
+#include <vector>
 
 #include <falcon/setup.h>
 #include <falcon/string.h>
 #include <falcon/types.h>
+#include <falcon/item.h>
 
 namespace Falcon {
-class Item;
 class VMContext;
 
-/**
- * Item Handler
- *
- * This is the base class for all the item handlers, that is, the classes
- * of items seen as native by the engine.
- */
-class FALCON_API_ IHandler
+class TypeInfo
 {
-public:
+	virtual ~TypeInfo() {}
+	using Ptr = std::shared_ptr<TypeInfo>;
+
 	using e_type = enum {
 		type_undefined,
 		type_nil,
@@ -56,37 +54,109 @@ public:
 
 	const String& name() const noexcept {return m_name;}
 	const e_type type() const noexcept {return m_type;}
+	virtual bool toBool(const Item& target) const noexcept =0;
+	virtual int64 toInteger(const Item& target) const noexcept =0;
+	virtual double toDouble(const Item& target) const noexcept =0;
+	virtual String toString(const Item& target) const noexcept =0;
 
-	virtual void create(Item& target, void* params=nullptr) const noexcept =0;
-	virtual void destroy(Item& target) const noexcept
-	{
-		// By default, do nothing.
-	}
+private:
+	String m_name;
+	e_type m_type;
+};
 
-	virtual bool toBool(const Item& target) const noexcept
-	{
-		return false;
-	}
+/**
+ * Item Handler
+ *
+ * This is the base class for all the item handlers, that is, the classes
+ * of items seen as native by the engine.
+ *
+ * They are comprising type information, static and unalterable,
+ * and a message table that is never changed after creation.
+ *
+ */
+class FALCON_API_ IHandler
+{
+public:
 
-	virtual int64 toInteger(const Item& target) const noexcept
-	{
-		return 0L;
-	}
+	/** The basic type information of this handler.
+	 *
+	 * Type information, or type behaviour, are the same across a wide
+	 * range of item handlers. For example, two items having the same
+	 * underlying string type could have different delegates,
+	 * accessors or garbage collection profiles.
+	 *
+	 * Hence, the type information associated with different handler might
+	 * be the same.
+	 *
+	 * Type Information are registered with the engine, and they are valid as long
+	 * as the engine exits. Once created, they cannot be destroyed or modified.
+	 * Hence, it's safe to access them by direct pointer.
+	 *
+	 */
+	TypeInfo* typeInfo() const noexcept { return m_typeInfo;}
 
-	virtual double toDouble(const Item& target) const noexcept
-	{
-		return 0.0;
-	}
+	/** Simplified accessor.
+	 * Use this if you can access your property or call your method directly, and
+	 * return a value to the virtual machine after your C++ call.
+	 *
+	 */
+	using GeterCB = bool (*)(const String& message, int id, const Item& self, Item& value);
+	using SetterCB = bool (*)(const String& message, int id, const Item& self, const Item& value);
+	using SenderCB = bool (*)(const String& message, int id, const Item& self, Item& retval,
+			const Item::sequence& paramters);
 
-	virtual String toString(const Item& target) const noexcept
-	{
-		return "Undefined";
-	}
+	/** Full message handler callback.
+	 *
+	 * A full message handler allows for direct manipulation of the VM context status.
+	 * Use this if you need call other functions from within your handler.
+	 */
+	using DeepAccessor = bool (*)(const String& message, int id, VMContext& ctx);
 
+	/** Stateful simple accessor.
+	 *
+	 * Use this when you can simply access your property or call your method, but you need
+	 * to keep extra data of any nature, including varying states.
+	 */
+	class SetterFunctor {
+	public:
+		using Ptr = std::shared_ptr<SetterFunctor>;
+		virtual ~SetterFunctor() {}
+		virtual bool operator()(const String& message, int id, const Item& value) = 0;
+	};
 
+	class GetterFunctor {
+	public:
+		using Ptr = std::shared_ptr<GetterFunctor>;
+		virtual ~GetterFunctor() {}
+		virtual bool operator()(const String& message, int id, const Item& value) = 0;
+	};
 
-	using MsgHandlerCB = bool (*)(const String& message, Item& self, VMContext& ctx);
+	/** Stateful deep accessor.
+	 *
+	 * A full message handler allows for direct manipulation of the VM context status,
+	 * with the ability to keep extra status.
+	 *
+	 * Use this if you need call other functions from within your handler, and possibly
+	 * use other data or status.
+	 */
+	class DeepFunctor {
+	public:
+		using Ptr = std::shared_ptr<DeepFunctor>;
+		virtual ~DeepFunctor() {}
+		virtual bool operator()(const String& message, int id, VMContext& ctx) = 0;
+	};
 
+	using Setter = std::variant<std::monostate, SetterCB, SetterFunctor::Ptr, DeepAccessor, DeepFunctor::Ptr>;
+	using Getter = std::variant<std::monostate, GetterCB, GetterFunctor::Ptr, DeepAccessor, DeepFunctor::Ptr>;
+	using Sender = std::variant<std::monostate, SenderCB, SenderFunctor::Ptr, DeepAccessor, DeepFunctor::Ptr>;
+
+	/** A message handler is a triplet of receivers.
+	 *
+	 * The message handler holds the behavior for setting a property,
+	 * getting a property and receiving a message directed to that property.
+	 *
+	 *
+	 */
 	class MsgHandler {
 	public:
 		MsgHandler() = default;
@@ -94,91 +164,30 @@ public:
 		MsgHandler(MsgHandler&& ) = default;
 		~MsgHandler() = default;
 
-		MsgHandler(MsgHandlerCB setp, MsgHandlerCB getp, MsgHandlerCB send):
-			m_setp{setp}, m_getp{getp}, m_send{send}
+		MsgHandler(Getter getter, Setter setter, Sender sender):
+			m_setter{setter}, m_getter{getter}, m_sender{sender}
 			{}
 
 		using Ptr = std::shared_ptr<MsgHandler>;
 
-		const MsgHandlerCB& setp() const noexcept { return m_setp; }
-		const MsgHandlerCB& getp() const noexcept { return m_setp; }
-		const MsgHandlerCB& send() const noexcept { return m_setp; }
+		const Setter& setter() const noexcept { return m_setter; }
+		const Getter& getter() const noexcept { return m_getter; }
+		const Sender& sender() const noexcept { return m_sender; }
 
 	private:
-		MsgHandlerCB m_setp{nullptr};
-		MsgHandlerCB m_getp{nullptr};
-		MsgHandlerCB m_send{nullptr};
+		Setter m_setter;
+		Getter m_getter;
+		Sender m_sender;
 	};
 
-
-	class Delegate {
-	public:
-		Delegate() = default;
-		Delegate(const Delegate&) = default;
-		Delegate(Delegate&&) = default;
-		~Delegate() = default;
-
-
-		Delegate(const Item& item, MsgHandler::Ptr msgh ):
-			m_target(item), m_msgh(msgh)
-		{}
-
-		using Ptr = std::shared_ptr<Delegate>;
-
-		const Item& target() const noexcept {return m_target;}
-		const MsgHandler::Ptr& msgh() const noexcept {return m_msgh;}
-
-	private:
-		Item m_target;
-		MsgHandler::Ptr m_msgh;
-	};
-
-
-	class MsgMapEntry {
-	public:
-		// We want the message callback pointer to be valid,
-		// even if we don't have callbacks
-		MsgMapEntry(): m_msgh(std::make_shared<MsgHandler>()) {}
-
-		MsgMapEntry(const MsgMapEntry&) = default;
-		MsgMapEntry(MsgMapEntry&&) = default;
-		~MsgMapEntry() = default;
-
-		MsgMapEntry(MsgHandler::Ptr msgh): m_msgh(msgh) {}
-		MsgMapEntry(MsgHandler::Ptr msgh, Delegate::Ptr delegate): m_msgh(msgh), m_delegate(delegate) {}
-		MsgMapEntry(MsgHandlerCB getp, MsgHandlerCB setp, MsgHandlerCB call):
-			m_msgh(std::make_shared<MsgHandler>(getp, setp, call))
-		{}
-		MsgMapEntry(MsgHandlerCB getp, MsgHandlerCB setp, MsgHandlerCB call, Delegate::Ptr delegate):
-					m_msgh(std::make_shared<MsgHandler>(getp, setp, call)),
-					m_delegate(delegate)
-		{}
-
-		const MsgHandler::Ptr& msgh() const noexcept { return m_msgh;}
-		const Delegate::Ptr& delegate() const noexcept { return m_msgh;}
-
-	private:
-		MsgHandler::Ptr	m_msgh;
-		Delegate::Ptr m_delegate;
-
-	};
-
-	using MessageMap = std::unordered_map<String, MsgMapEntry>;
 
 	void addMessage(const String& msg, MsgHandler::Ptr mh) noexcept;
-	void addMessage(const String& msg, MsgHandlerCB getp,  MsgHandlerCB setp,  MsgHandlerCB send) noexcept
+	void addMessage(const String& msg, Receiver getp,  Receiver setp,  Receiver send) noexcept
 	{
 		addMessage(msg, std::make_shared<MsgHandler>(getp, setp, send));
 	}
 
-	void addMessage(const String& msg, MsgHandler::Ptr mh, Delegate::Ptr delegate) noexcept;
-
-	void addMessage(const String& msg, MsgHandlerCB getp,  MsgHandlerCB setp,  MsgHandlerCB send, Delegate::Ptr delegate) noexcept
-	{
-		addMessage(msg, std::make_shared<MsgHandler>(getp, setp, send), delegate);
-	}
-
-	bool delegate(const String& msg, Delegate::Ptr delegate) noexcept;
+	bool delegate(const String& msg, Item& delegate) noexcept;
 	bool clearDelegate(const String& msg) noexcept;
 	bool delMessage(const String& msg) noexcept;
 
@@ -188,24 +197,27 @@ public:
 		return pos != m_messageMap.end();
 	}
 
-	bool hasSend(const String& msg) const noexcept {
+	bool hasSender(const String& msg) const noexcept {
 		MessageMap::const_iterator pos{m_messageMap.find(msg)};
-		return pos != m_messageMap.end() && pos->second.msgh()->send() != nullptr;
+		return pos != m_messageMap.end()
+				&& ! std::holds_alternative<std::monostate>(pos->second.msgh()->sender());
 	}
 
-	bool hasGetp(const String& msg) const noexcept {
+	bool hasGetter(const String& msg) const noexcept {
 		MessageMap::const_iterator pos{m_messageMap.find(msg)};
-		return pos != m_messageMap.end() && pos->second.msgh()->getp() != nullptr;
+		return pos != m_messageMap.end()
+				&& ! std::holds_alternative<std::monostate>(pos->second.msgh()->getter());
 	}
 
-	bool hasSetp(const String& msg) const noexcept {
+	bool hasSetter(const String& msg) const noexcept {
 		MessageMap::const_iterator pos{m_messageMap.find(msg)};
-		return pos != m_messageMap.end() && pos->second.msgh()->setp() != nullptr;
+		return pos != m_messageMap.end()
+				&& ! std::holds_alternative<std::monostate>(pos->second.msgh()->setter());
 	}
 
 	bool hasDelegate(const String& msg) const noexcept {
 		MessageMap::const_iterator pos{m_messageMap.find(msg)};
-		return pos != m_messageMap.end() && pos->second.delegate().get() != nullptr;
+		return pos != m_messageMap.end() && ! pos->second.delegate().isNil();
 	}
 
 	//const MessageMap& messages() const noexcept {return m_messageMap;}
@@ -214,7 +226,7 @@ public:
 		m_defaultHandler = mh;
 	}
 
-	void setDefaultHandler(MsgHandlerCB getp, MsgHandlerCB setp, MsgHandlerCB send) noexcept {
+	void setDefaultHandler(Receiver getp, Receiver setp, Receiver send) noexcept {
 		m_defaultHandler = std::make_shared<MsgHandler>(getp, setp, send);
 	}
 
@@ -226,16 +238,25 @@ public:
 		m_defaultHandler.reset();
 	}
 
-	void setDefaultDelegate(Delegate::Ptr mh) noexcept;
+	// will throw on circular reference
+	void setDefaultDelegate(const Item& delegate) {
+		checkCircularDelegate(*this, delegate.concept());
+		m_defaultDelegate = delegate;
+	}
 
-	Delegate* getDefaultDelegate() const noexcept {
-		return m_defaultDelegate.get();
+	const Item& getDefaultDelegate() const noexcept {
+		return m_defaultDelegate;
 	}
 
 	void clearDefaultDelegate() noexcept {
-		m_defaultDelegate.reset();
+		m_defaultDelegate.setNil();
 	}
 
+	// will throw on circular reference
+	void addBase(const Item& base)  {
+		checkCircularDelegate(*this, base.concept());
+		m_bases.push_back(base);
+	}
 
 	/**
 	 * Send a message to the handler.
@@ -286,27 +307,58 @@ public:
 	void setProperty(const String& msg, Item& self, Item& value, VMContext& ctx) const noexcept;
 
 protected:
-
-	IHandler(const String& name="Undefined", e_type type=type_undefined):
-		m_name(name),
-		m_type(type)
+	IHandler(TypeInfo *type):
+		m_typeInfo(type)
 	{}
 	virtual ~IHandler() = default;
 
 private:
-	String m_name;
-	e_type m_type;
-	using MessageMap = std::unordered_map<String, MsgHandler>;
+
+	class MsgMapEntry {
+	public:
+		// We want the message callback pointer to be valid,
+		// even if we don't have callbacks
+		MsgMapEntry(): m_msgh(std::make_shared<MsgHandler>()) {}
+
+		MsgMapEntry(const MsgMapEntry&) = default;
+		MsgMapEntry(MsgMapEntry&&) = default;
+		~MsgMapEntry() = default;
+
+		MsgMapEntry(MsgHandler::Ptr msgh): m_msgh(msgh) {}
+		MsgMapEntry(MsgHandler::Ptr msgh, const Item& delegate): m_msgh(msgh), m_delegate(delegate) {}
+		MsgMapEntry(Receiver getp, Receiver setp, Receiver call):
+			m_msgh(std::make_shared<MsgHandler>(getp, setp, call))
+		{}
+		MsgMapEntry(Receiver getp, Receiver setp, Receiver call, const Item& delegate):
+					m_msgh(std::make_shared<MsgHandler>(getp, setp, call)),
+					m_delegate(delegate)
+		{}
+
+		const MsgHandler::Ptr& msgh() const noexcept { return m_msgh;}
+		const Item& delegate() const noexcept {return m_delegate;}
+		void delegate(Item delegate) const noexcept {m_delegate = delegate;}
+		void clearDelegate() noexcept {m_delegate.setNil();}
+
+		int id() const noexcept {return m_id;}
+	private:
+		int m_id{0};
+		MsgHandler::Ptr	m_msgh;
+		Item m_delegate;
+
+	};
+
+	int m_msgId{0};
+	TypeInfo* m_typeInfo;
+
+	using MessageMap = std::unordered_map<String, MsgMapEntry>;
 	MessageMap m_messageMap;
 
 	MsgHandler::Ptr m_defaultHandler;
-	Delegate::Ptr m_defaultDelegate;
+	Item m_defaultDelegate;
 
-	bool checkCircularDelegate(const Delegate* delegate) const noexcept {
-		return IHandler::checkCircularDelegate(delegate, this);
-	}
-
-	static bool checkCircularDelegate(const Delegate* delegate, const IHandler* origin);
+	std::vector<Item> m_bases;
+	static bool checkCircularDelegate(const IHandler& origin, const IHandler& target);
+	void accessor(const String& msg, Item& self, VMContext& ctx, bool isSetter) const noexcept;
 };
 
 }

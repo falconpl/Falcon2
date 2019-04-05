@@ -49,7 +49,6 @@ class String: public std::string {
 
 	String& operator =(const String& other) {str() = other.str(); return *this; }
 	bool operator <(const String& other) const noexcept {return str() < other.str(); }
-
 };
 
 std::ostream& operator <<(std::ostream out, String& render) {
