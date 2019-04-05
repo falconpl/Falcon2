@@ -29,8 +29,6 @@ class IHandler;
 
 class Item {
 public:
-	using sequence = std::vector<Item>;
-
 	using Data = union __dt {
 		bool asBool;
 		char asChars[8];
@@ -45,7 +43,6 @@ public:
 		__dt(void* ptr):
 			asPointer(ptr)
 		{}
-
 	};
 
 	using ConceptData = struct {
@@ -56,33 +53,101 @@ public:
 	Item() noexcept: m_content{nullptr, nullptr} {}
 	Item(const Item& other) noexcept {copy(other);}
 	Item(Item&& other) noexcept:
-		m_content(other.m_content.exchange({nullptr, nullptr}, std::memory_order_acq_rel))
+		m_content(other.get_weak())
 	{}
 	~Item() = default;
 
-	void set(const ConceptData& cd) volatile noexcept {m_content.store(cd, std::memory_order_relaxed);}
-	ConceptData get() const volatile noexcept { return m_content.load(std::memory_order_relaxed);}
-	void copy(const Item& other) volatile {
-		// todo. Color?
-		m_content.store(
-				other.m_content.load(std::memory_order_acquire),
-				std::memory_order_release);
+	void set(const ConceptData& cd) noexcept
+	{
+		fast_lock();
+		m_content.data = cd.data;
+		fast_unlock(cd.concept);
 	}
 
-	Item& operator=(const Item& other) volatile noexcept {copy(other); return *this;}
+	void set_weak(const ConceptData& cd) noexcept
+	{
+		m_content.concept.store(cd.concept, std::memory_order_relaxed);
+		m_content.data = cd.data;
+	}
 
-	bool isNil() const volatile noexcept {return get().concept == nullptr;}
-	void setNil() volatile noexcept {set({nullptr, nullptr});}
+	ConceptData get() const noexcept
+	{
+		ConceptData ret{fast_lock(), m_content.data};
+		fast_unlock(ret.concept);
+		return ret;
+	}
+
+	ConceptData get_weak() const noexcept
+	{
+		return {m_content.concept.load(std::memory_order_relaxed), m_content.data};
+	}
+
+	void copy(const Item& other) noexcept {
+		// TODO Color?
+		auto temp = other.get();
+		fast_lock();
+		m_content.data = temp.data;
+		fast_unlock(temp.concept);
+	}
+
+	void copy_weak(const Item& other) noexcept {
+		// TODO Color?
+		set_weak(other.get_weak());
+	}
+
+	Item& operator=(const Item& other) noexcept {copy(other); return *this;}
+	bool operator==(const Item& other) const noexcept {return get() == other.get();}
+	bool operator!=(const Item& other) const noexcept {return ! (*this == other);}
+	bool fast_compare(const Item& other) const noexcept {return get_weak() == other.get_weak();}
+
+	bool isNil() const noexcept {return get().concept == nullptr;}
+	void setNil() noexcept {set({nullptr, nullptr});}
 
 	const IHandler& concept() const noexcept { return *get().concept; }
 	IHandler& concept() noexcept { return *get().concept; }
 	const Data& data() const noexcept { return get().data; }
 	Data& data() noexcept { return get().data; }
 
+	template<typename _T>
+	void getAs(_T& target) const { getAs_mode(target, get); }
+	template<typename _T>
+	void getAs_weak(_T& target) const { getAs_mode(target, get_weak); }
+
+	// TODO set from integral/well known types requires the engine to be in place.
+
 private:
-	using Content = std::atomic<ConceptData>;
-	// many important constructors accept m_content as uninitialized.
-	Content m_content;
+	using Content = struct {
+		std::atomic<IHandler*> concept{nullptr};
+		Data data;
+	};
+
+	mutable Content m_content;
+	IHandler* fast_lock() const volatile noexcept {
+		IHandler* cpt;
+		while(true) {
+			// wait for the entity to be valid (and unlocked)
+			while((cpt = m_content.concept.load()) == reinterpret_cast<IHandler*>(-1)) {}
+			// hope we can get it
+			if( m_content.concept.compare_exchange_weak(cpt, reinterpret_cast<IHandler*>(-1), std::memory_order_acquire) )
+			{
+				// if we can null it, return the old value.
+				return cpt;
+			}
+		}
+	}
+
+	void fast_unlock(IHandler *value) const volatile noexcept {
+		m_content.concept.store(value, std::memory_order_release);
+	}
+
+	template<typename _T, typename _Getter>
+	void getAs_mode(_T& target ) const {
+		auto cd = _Getter();
+		if(cd.concept) {
+			cd.concept->getAs(cd.data, target);
+		}
+	}
+
 };
 }
 
