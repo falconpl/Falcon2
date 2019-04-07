@@ -85,6 +85,41 @@ public:
 		EXPECT_EQ(to, std::get<int>(*eiter));
 	}
 
+	struct SharedMem {
+		std::size_t m_allocCount{0};
+		std::size_t m_allocSize{0};
+		std::size_t m_deallocCount{0};
+		std::size_t m_deallocSize{0};
+		std::size_t m_totalAlloc{0};
+	};
+
+	template<typename _T>
+	class TestAllocator
+	{
+		SharedMem* m_counters;
+	public:
+		TestAllocator(SharedMem* ptr): m_counters(ptr) {}
+
+		using value_type = _T;
+		using pointer_type = _T*;
+		using reference_type = _T&;
+
+		pointer_type allocate(std::size_t size)
+		{
+			++m_counters->m_allocCount;
+			m_counters->m_allocSize += size;
+			m_counters->m_totalAlloc += size * sizeof(_T);
+			size_t allocSize = size * sizeof(_T);
+			return static_cast<pointer_type>(operator new(allocSize));
+		}
+
+		void deallocate(void* data, std::size_t size) {
+			++m_counters->m_deallocCount;
+			m_counters->m_deallocSize += size;
+			operator delete(data);
+		}
+	};
+
 };
 
 TEST_F(DeepStackTest, smoke)
@@ -511,6 +546,91 @@ TEST_F(DeepStackTest, pop_reverse)
 
 	EXPECT_STREQ("new top", std::get<std::string>(m_stack.top()));
 }
+
+TEST_F(DeepStackTest, allocator_smoke)
+{
+	SharedMem dataAlloc;
+	SharedMem pageAlloc;
+	SharedMem baseAlloc;
+
+	using types = Falcon::DeepStackTypes<int, TestAllocator, TestAllocator, TestAllocator>;
+	{
+		auto testalloc = Falcon::DeepStack<int, TestAllocator, TestAllocator, TestAllocator>(
+				4,2,
+				types::data_allocator(&dataAlloc),
+				types::page_allocator(&pageAlloc),
+				types::base_allocator(&baseAlloc));
+
+		EXPECT_EQ(2, dataAlloc.m_allocCount);
+		EXPECT_EQ(8, dataAlloc.m_allocSize);
+		EXPECT_EQ(2, pageAlloc.m_allocCount);
+		EXPECT_EQ(2, pageAlloc.m_allocSize);
+		EXPECT_EQ(1, baseAlloc.m_allocCount);
+		EXPECT_EQ(2, baseAlloc.m_allocSize);
+	}
+
+	EXPECT_EQ(dataAlloc.m_deallocCount, dataAlloc.m_allocCount);
+	EXPECT_EQ(dataAlloc.m_deallocSize, dataAlloc.m_allocSize);
+	EXPECT_EQ(pageAlloc.m_deallocCount, pageAlloc.m_allocCount);
+	EXPECT_EQ(pageAlloc.m_deallocSize, pageAlloc.m_allocSize);
+	EXPECT_EQ(baseAlloc.m_deallocCount, baseAlloc.m_allocCount);
+	EXPECT_EQ(baseAlloc.m_deallocSize, baseAlloc.m_allocSize);
+}
+
+TEST_F(DeepStackTest, allocator)
+{
+	SharedMem dataAlloc;
+	SharedMem pageAlloc;
+	SharedMem baseAlloc;
+
+	using types = Falcon::DeepStackTypes<std::string, TestAllocator, TestAllocator, TestAllocator>;
+	{
+		auto testalloc = Falcon::DeepStack<std::string, TestAllocator, TestAllocator, TestAllocator>(
+				4,2,
+				types::data_allocator(&dataAlloc),
+				types::page_allocator(&pageAlloc),
+				types::base_allocator(&baseAlloc));
+
+		testalloc.push(
+				"one", "two", "three", "four", /* page 1 */
+				"five", "six", "seven", "eight", /* page 2 */
+				"nine", "ten", "eleven", "twelve" /* page 3 */
+		);
+
+		EXPECT_EQ(4, dataAlloc.m_allocCount);
+		EXPECT_EQ(16, dataAlloc.m_allocSize);
+		EXPECT_EQ(4, pageAlloc.m_allocCount);
+		EXPECT_EQ(4, pageAlloc.m_allocSize);
+		EXPECT_EQ(2, baseAlloc.m_allocCount);
+		EXPECT_EQ(6, baseAlloc.m_allocSize);
+
+		std::string twelve, eleven, ten, nine, eight;
+		testalloc.pop(twelve, eleven, ten, nine, eight);
+		EXPECT_STREQ("twelve", twelve);
+		EXPECT_STREQ("eleven", eleven);
+		EXPECT_STREQ("ten", ten);
+		EXPECT_STREQ("nine", nine);
+		EXPECT_STREQ("eight", eight);
+
+		// we expect no further allocation to take place...
+		testalloc.push(twelve, eleven, ten, nine, eight, "thirtheen");
+
+		EXPECT_EQ(4, dataAlloc.m_allocCount);
+		EXPECT_EQ(16, dataAlloc.m_allocSize);
+		EXPECT_EQ(4, pageAlloc.m_allocCount);
+		EXPECT_EQ(4, pageAlloc.m_allocSize);
+		EXPECT_EQ(2, baseAlloc.m_allocCount);
+		EXPECT_EQ(6, baseAlloc.m_allocSize);
+	}
+
+	EXPECT_EQ(dataAlloc.m_deallocCount, dataAlloc.m_allocCount);
+	EXPECT_EQ(dataAlloc.m_deallocSize, dataAlloc.m_allocSize);
+	EXPECT_EQ(pageAlloc.m_deallocCount, pageAlloc.m_allocCount);
+	EXPECT_EQ(pageAlloc.m_deallocSize, pageAlloc.m_allocSize);
+	EXPECT_EQ(baseAlloc.m_deallocCount, baseAlloc.m_allocCount);
+	EXPECT_EQ(baseAlloc.m_deallocSize, baseAlloc.m_allocSize);
+}
+
 
 FALCON_TEST_MAIN
 

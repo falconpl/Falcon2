@@ -21,37 +21,105 @@
 #define _FALCON_DEEPSTACK_H_
 
 namespace Falcon {
+/*
+template<typename _T> using _PageType = std::vector<_T>;
+template<typename _T, typename _deletor=std::default_delete<_T>>
+			using _PagePtrType = std::unique_ptr<_PageType<_T>, _deletor>;
 
+template<typename _T, typename _allocator=std::allocator<_PagePtr<>>
+			using _PagePtrType = std::unique_ptr<_PageType<_T>, _deletor>;
+*/
 /**
  * Stack-like structure indefinitely growable.
  *
  */
 
+
 template<typename _T,
-			class _Allocator=std::allocator<_T>,
-			typename _DeepAlloc=std::allocator<std::vector<_T, _Allocator>> >
+	template<typename> typename _DataAllocatorTpl=std::allocator,
+	template<typename> typename _PageAllocatorTpl=std::allocator,
+	template<typename> typename _BaseAllocatorTpl=std::allocator>
+class DeepStackTypes
+{
+public:
+	using value_type = _T;
+	using data_allocator = _DataAllocatorTpl<_T>;
+private:
+	using VData = std::vector<_T, data_allocator>;
+public:
+	using page_allocator = _PageAllocatorTpl<VData>;
+private:
+
+	template<typename VData, typename _PageAllocator>
+	class VDataDeleter {
+		public:
+			VDataDeleter(): m_allocator{nullptr} {}
+			VDataDeleter(_PageAllocator* alloc): m_allocator(alloc) {}
+			void operator()(VData* ptr) const {
+				ptr->~VData();
+				if (m_allocator) m_allocator->deallocate(ptr, 1);
+			}
+		private:
+			_PageAllocator* m_allocator{0};
+		};
+
+	using _VDataDeleter = VDataDeleter<VData, page_allocator>;
+	using page_ptr_type = std::unique_ptr<VData, _VDataDeleter>;
+public:
+	using base_allocator = _BaseAllocatorTpl<page_ptr_type>;
+private:
+	using VBase = std::vector<page_ptr_type, base_allocator>;
+
+	template<typename _X,
+				template<typename> typename _A,
+				template<typename> typename _B,
+				template<typename> typename _C>
+	friend class DeepStack;
+};
+
+
+
+template<typename _T,
+			template<typename> typename _DataAllocatorTpl=std::allocator,
+			template<typename> typename _PageAllocatorTpl=std::allocator,
+			template<typename> typename _BaseAllocatorTpl=std::allocator>
 class DeepStack
 {
 private:
-	using VData = std::vector<_T, _Allocator>;
-	using VBase = std::vector<std::unique_ptr<VData>, _DeepAlloc >;
 
-	VBase m_base;
+	using types = DeepStackTypes<_T, _DataAllocatorTpl, _PageAllocatorTpl, _BaseAllocatorTpl>;
+
+	using _DataAllocator = typename types::data_allocator;
+	using VData = typename types::VData;
+	using _PageAllocator = typename types::page_allocator;
+	using _VDataDeleter = typename types::_VDataDeleter;
+	using page_ptr_type = typename types::page_ptr_type;
+	using _BaseAllocator = typename types::base_allocator;
+	using VBase = typename types::VBase;
+
 	size_t m_pageSize;
+	VBase m_base;
 	typename VBase::iterator m_curBase;
+	_DataAllocator m_dataAllocator;
+	_PageAllocator m_pageAllocator;
 
 	friend class iterator;
+
+	void fillBase(typename VBase::iterator begin, const typename VBase::iterator& end) {
+		while(begin != end) {
+			page_ptr_type ptr{new(m_pageAllocator.allocate(1)) VData(m_dataAllocator), _VDataDeleter(&m_pageAllocator)};
+			ptr->reserve(m_pageSize);
+			*begin = std::move(ptr);
+			++begin;
+		}
+	}
 
 	void growBase() {
 		size_t size = m_base.size();
 		m_base.resize(size == 0 ? 1: size * 2);
-		for(size_t p = size; p < m_base.size(); ++p) {
-			m_base[p].reset(new VData());
-			m_base[p]->reserve(m_pageSize);
-		}
+		fillBase(m_base.begin()+size, m_base.end());
 		m_curBase = m_base.begin() + size;
 	}
-
 
 	void advance() {
 		if ((*m_curBase)->size() == m_pageSize) {
@@ -61,7 +129,6 @@ private:
 			}
 		}
 	}
-
 
 	template<typename _IBase>
 	static typename VData::iterator depth_from_top(size_t depth, _IBase& iBase) noexcept
@@ -110,7 +177,6 @@ private:
 			(*m_curBase)->resize(iData - (*m_curBase)->begin());
 		}
 	}
-
 
 	template<typename _TT, typename _IBase, typename _IData>
 	class reverse_iterator_base {
@@ -192,7 +258,6 @@ private:
 		_IBase m_iBaseEnd;
 	};
 
-
 	template<typename _TT, typename _IBase, typename _IData>
 	class iterator_base {
 	public:
@@ -273,20 +338,30 @@ public:
 
 	using value_type = _T;
 	using reference_type = _T&;
+	using page_type = std::vector<value_type>;
+	using base_type = std::unique_ptr<page_type>;
+
 	using iterator = iterator_base<_T, typename VBase::iterator, typename VData::iterator>;
 	using const_iterator = iterator_base<const _T, typename VBase::const_iterator, typename VData::const_iterator>;
 	using reverse_iterator = reverse_iterator_base<_T, typename VBase::iterator, typename VData::iterator>;
 	using const_reverse_iterator = reverse_iterator_base<const _T, typename VBase::const_iterator, typename VData::const_iterator>;
-	using allocator_type = typename VBase::allocator_type;
+	using base_allocator_type = _BaseAllocator;
+	using page_allocator_type = _PageAllocator;
+	using allocator_type =  _DataAllocator;
 
-	DeepStack(size_t pageSize = DEFAULT_PAGE_SIZE, size_t prealloc = DEFAULT_BASE_SIZE):
-		m_pageSize(pageSize)
+
+
+	DeepStack(size_t pageSize = DEFAULT_PAGE_SIZE, size_t prealloc = DEFAULT_BASE_SIZE,
+			const allocator_type& dataAllocator = std::allocator<value_type>(),
+			const page_allocator_type& pageAllocator = std::allocator<page_type>(),
+			const base_allocator_type& baseAllocator = std::allocator<base_type>() ):
+		m_pageSize(pageSize),
+		m_base(baseAllocator),
+		m_pageAllocator(pageAllocator),
+		m_dataAllocator(dataAllocator)
 	{
 		m_base.resize(prealloc);
-		for(auto& vdata: m_base) {
-			vdata.reset(new VData());
-			vdata->reserve(pageSize);
-		}
+		fillBase(m_base.begin(), m_base.end());
 		m_curBase = m_base.begin();
 	}
 
@@ -515,6 +590,9 @@ public:
 		return count;
 	}
 
+	allocator_type get_allocator() const noexcept { return m_dataAllocator;}
+	page_allocator_type get_page_allocator() const noexcept { return m_pageAllocator;}
+	base_allocator_type get_base_allocator() const noexcept { return m_base.get_allocator();}
 
 	/**
 	 * Diagnostic
@@ -525,8 +603,6 @@ public:
 		curBlock = m_curBase - m_base.begin()+1;
 		curData = (*m_curBase)->size();
 	}
-
-
 };
 
 
