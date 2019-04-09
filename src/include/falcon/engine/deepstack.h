@@ -21,14 +21,6 @@
 #define _FALCON_DEEPSTACK_H_
 
 namespace Falcon {
-/*
-template<typename _T> using _PageType = std::vector<_T>;
-template<typename _T, typename _deletor=std::default_delete<_T>>
-			using _PagePtrType = std::unique_ptr<_PageType<_T>, _deletor>;
-
-template<typename _T, typename _allocator=std::allocator<_PagePtr<>>
-			using _PagePtrType = std::unique_ptr<_PageType<_T>, _deletor>;
-*/
 /**
  * Stack-like structure indefinitely growable.
  *
@@ -36,10 +28,10 @@ template<typename _T, typename _allocator=std::allocator<_PagePtr<>>
 
 
 template<typename _T,
-	template<typename> typename _DataAllocatorTpl=std::allocator,
-	template<typename> typename _PageAllocatorTpl=std::allocator,
-	template<typename> typename _BaseAllocatorTpl=std::allocator>
-class DeepStackTypes
+			template<typename> typename _DataAllocatorTpl=std::allocator,
+			template<typename> typename _PageAllocatorTpl=std::allocator,
+			template<typename> typename _BaseAllocatorTpl=std::allocator>
+class DeepStack
 {
 public:
 	using value_type = _T;
@@ -70,38 +62,13 @@ public:
 private:
 	using VBase = std::vector<page_ptr_type, base_allocator>;
 
-	template<typename _X,
-				template<typename> typename _A,
-				template<typename> typename _B,
-				template<typename> typename _C>
-	friend class DeepStack;
-};
-
-
-
-template<typename _T,
-			template<typename> typename _DataAllocatorTpl=std::allocator,
-			template<typename> typename _PageAllocatorTpl=std::allocator,
-			template<typename> typename _BaseAllocatorTpl=std::allocator>
-class DeepStack
-{
 private:
-
-	using types = DeepStackTypes<_T, _DataAllocatorTpl, _PageAllocatorTpl, _BaseAllocatorTpl>;
-
-	using _DataAllocator = typename types::data_allocator;
-	using VData = typename types::VData;
-	using _PageAllocator = typename types::page_allocator;
-	using _VDataDeleter = typename types::_VDataDeleter;
-	using page_ptr_type = typename types::page_ptr_type;
-	using _BaseAllocator = typename types::base_allocator;
-	using VBase = typename types::VBase;
 
 	size_t m_pageSize;
 	VBase m_base;
 	typename VBase::iterator m_curBase;
-	_DataAllocator m_dataAllocator;
-	_PageAllocator m_pageAllocator;
+	data_allocator m_dataAllocator;
+	page_allocator m_pageAllocator;
 
 	friend class iterator;
 
@@ -336,7 +303,6 @@ public:
 		DEFAULT_BASE_SIZE=2
 	};
 
-	using value_type = _T;
 	using reference_type = _T&;
 	using page_type = std::vector<value_type>;
 	using base_type = std::unique_ptr<page_type>;
@@ -345,9 +311,9 @@ public:
 	using const_iterator = iterator_base<const _T, typename VBase::const_iterator, typename VData::const_iterator>;
 	using reverse_iterator = reverse_iterator_base<_T, typename VBase::iterator, typename VData::iterator>;
 	using const_reverse_iterator = reverse_iterator_base<const _T, typename VBase::const_iterator, typename VData::const_iterator>;
-	using base_allocator_type = _BaseAllocator;
-	using page_allocator_type = _PageAllocator;
-	using allocator_type =  _DataAllocator;
+	using base_allocator_type = base_allocator;
+	using page_allocator_type = page_allocator;
+	using allocator_type =  data_allocator;
 
 
 

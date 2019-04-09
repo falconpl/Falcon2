@@ -1,16 +1,16 @@
 /*****************************************************************************
-  FALCON2 - The Falcon Programming Language
-  FILE: deepstack.fut.cpp
+FALCON2 - The Falcon Programming Language
+FILE: deepstack.fut.cpp
 
-  Test for DeepStack
-  -------------------------------------------------------------------
-  Author: Giancarlo Niccolai
-  Begin : Sat, 06 Apr 2019 16:17:19 +0100
-  Touch : Sat, 06 Apr 2019 16:17:19 +0100
+Test for DeepStack
+-------------------------------------------------------------------
+Author: Giancarlo Niccolai
+Begin : Sat, 06 Apr 2019 16:17:19 +0100
+Touch : Sat, 06 Apr 2019 16:17:19 +0100
 
-  -------------------------------------------------------------------
-  (C) Copyright 2019 The Falcon Programming Language
-  Released under Apache 2.0 License.
+-------------------------------------------------------------------
+(C) Copyright 2019 The Falcon Programming Language
+Released under Apache 2.0 License.
 ******************************************************************************/
 
 #include <falcon/fut/fut.h>
@@ -23,7 +23,7 @@
 
 class DeepStackTest: public Falcon::testing::TestCase
 {
-public:
+	public:
 	struct SomeStruct {
 		int alpha{0};
 		std::string beta;
@@ -48,7 +48,7 @@ public:
 
 		int power = 2;
 		while(power < cb)
-		    power*=2;
+			power*=2;
 
 		EXPECT_EQ(power, blocks);
 		EXPECT_EQ(4, depth);
@@ -553,13 +553,13 @@ TEST_F(DeepStackTest, allocator_smoke)
 	SharedMem pageAlloc;
 	SharedMem baseAlloc;
 
-	using types = Falcon::DeepStackTypes<int, TestAllocator, TestAllocator, TestAllocator>;
+	using dstack = Falcon::DeepStack<int, TestAllocator, TestAllocator, TestAllocator>;
 	{
-		auto testalloc = Falcon::DeepStack<int, TestAllocator, TestAllocator, TestAllocator>(
+		auto testalloc = dstack(
 				4,2,
-				types::data_allocator(&dataAlloc),
-				types::page_allocator(&pageAlloc),
-				types::base_allocator(&baseAlloc));
+				dstack::data_allocator(&dataAlloc),
+				dstack::page_allocator(&pageAlloc),
+				dstack::base_allocator(&baseAlloc));
 
 		EXPECT_EQ(2, dataAlloc.m_allocCount);
 		EXPECT_EQ(8, dataAlloc.m_allocSize);
@@ -583,13 +583,13 @@ TEST_F(DeepStackTest, allocator)
 	SharedMem pageAlloc;
 	SharedMem baseAlloc;
 
-	using types = Falcon::DeepStackTypes<std::string, TestAllocator, TestAllocator, TestAllocator>;
+	using dstack = Falcon::DeepStack<std::string, TestAllocator, TestAllocator, TestAllocator>;
 	{
-		auto testalloc = Falcon::DeepStack<std::string, TestAllocator, TestAllocator, TestAllocator>(
+		auto testalloc = dstack(
 				4,2,
-				types::data_allocator(&dataAlloc),
-				types::page_allocator(&pageAlloc),
-				types::base_allocator(&baseAlloc));
+				dstack::data_allocator(&dataAlloc),
+				dstack::page_allocator(&pageAlloc),
+				dstack::base_allocator(&baseAlloc));
 
 		testalloc.push(
 				"one", "two", "three", "four", /* page 1 */
@@ -634,4 +634,4 @@ TEST_F(DeepStackTest, allocator)
 
 FALCON_TEST_MAIN
 
-/* end of deepstack.fut.cpp */
+	/* end of deepstack.fut.cpp */
