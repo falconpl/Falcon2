@@ -1,8 +1,8 @@
 /*****************************************************************************
 FALCON2 - The Falcon Programming Language
-FILE: deepstack.fut.cpp
+FILE: pagedstack.fut.cpp
 
-Test for DeepStack
+Test for PagedStack
 -------------------------------------------------------------------
 Author: Giancarlo Niccolai
 Begin : Sat, 06 Apr 2019 16:17:19 +0100
@@ -14,14 +14,14 @@ Released under Apache 2.0 License.
  ******************************************************************************/
 
 #include <falcon/fut/fut.h>
-#include <falcon/engine/deepstack.h>
+#include <falcon/engine/pagedstack.h>
 #include <variant>
 #include <functional>
 #include <sstream>
 
 #include <iostream>
 
-class DeepStackTest: public Falcon::testing::TestCase
+class PagedStackTest: public Falcon::testing::TestCase
 {
 public:
    struct SomeStruct {
@@ -36,8 +36,8 @@ public:
    };
 
    using datatype = std::variant<int, std::string, SomeStruct>;
-   using DeepStack = Falcon::DeepStack<datatype>;
-   DeepStack m_stack{4,2};
+   using PagedStack = Falcon::PagedStack<datatype>;
+   PagedStack m_stack{4,2};
 
    void SetUp() {}
    void TearDown() {}
@@ -94,56 +94,69 @@ public:
    {
    public:
       SharedMem* m_counters;
+      SharedMem* m_large_counters;
+
    public:
       using value_type = _T;
       using size_type = std::size_t;
       using propagate_on_container_move_assignment = std::true_type;
 
-      template <typename U>
-      using  rebind = TestAllocator<U>;
+      template <class U> struct rebind { typedef TestAllocator<U> other; };
 
       TestAllocator()noexcept  :m_counters{0} {}
       template <typename U>
       TestAllocator(const TestAllocator<U>& other) noexcept:m_counters{other.m_counters} {}
 
-      TestAllocator(TestAllocator&& other)noexcept  {
-         m_counters = other.m_counters;
-         other.m_counters = nullptr;
+      TestAllocator(TestAllocator&& other) noexcept:
+    	  m_counters(other.m_counters),
+		  m_large_counters(other.m_large_counters)
+	  {
+         other.m_large_counters = other.m_counters = nullptr;
       }
 
-      TestAllocator(const TestAllocator& other) noexcept: m_counters(other.m_counters) {}
-      TestAllocator(SharedMem* ptr) noexcept: m_counters(ptr) {}
+      TestAllocator(const TestAllocator& other) noexcept:
+    		  m_counters(other.m_counters),
+			  m_large_counters(other.m_large_counters)
+	  {}
+
+      TestAllocator(SharedMem* ptr, SharedMem* lptr) noexcept:
+    		  m_counters(ptr),
+			  m_large_counters(lptr)
+	  {}
 
       using pointer_type = _T*;
       using reference_type = _T&;
 
       pointer_type allocate(std::size_t size)
       {
-         if(m_counters) {
-            ++m_counters->m_allocCount;
-            m_counters->m_allocSize += size;
-            m_counters->m_totalAlloc += size * sizeof(_T);}
-         size_t allocSize = size * sizeof(_T);
-         return static_cast<pointer_type>(operator new(allocSize));
+    	  SharedMem* p = size > 2 ? m_large_counters : m_counters;
+          if(p) {
+            ++p->m_allocCount;
+            p->m_allocSize += size;
+            p->m_totalAlloc += size * sizeof(_T);}
+          size_t allocSize = size * sizeof(_T);
+          return static_cast<pointer_type>(operator new(allocSize));
       }
 
       void deallocate(void* data, std::size_t size) {
-         if(m_counters) {
-            ++m_counters->m_deallocCount;
-            m_counters->m_deallocSize += size;}
+    	 SharedMem* p = size > 2 ? m_large_counters : m_counters;
+         if(p) {
+            ++p->m_deallocCount;
+            p->m_deallocSize += size;
+         }
          operator delete(data);
       }
    };
 };
 
 
-TEST_F(DeepStackTest, smoke)
+TEST_F(PagedStackTest, smoke)
 {
    EXPECT_TRUE(m_stack.empty());
    EXPECT_EQ(0, m_stack.size());
 }
 
-TEST_F(DeepStackTest, simple_push)
+TEST_F(PagedStackTest, simple_push)
 {
    m_stack.push("Hello world");
 
@@ -152,7 +165,7 @@ TEST_F(DeepStackTest, simple_push)
    EXPECT_STREQ("Hello world", std::get<std::string>(m_stack.top()));
 }
 
-TEST_F(DeepStackTest, double_push)
+TEST_F(PagedStackTest, double_push)
 {
    m_stack.push(1, "Hello world");
 
@@ -162,9 +175,9 @@ TEST_F(DeepStackTest, double_push)
 }
 
 
-TEST_F(DeepStackTest, simple_emplace)
+TEST_F(PagedStackTest, simple_emplace)
 {
-   Falcon::DeepStack<SomeStruct> emplacer;
+   Falcon::PagedStack<SomeStruct> emplacer;
 
    emplacer.push_emplace(1, "Hello world");
 
@@ -176,9 +189,9 @@ TEST_F(DeepStackTest, simple_emplace)
    EXPECT_STREQ("Hello world", top.beta);
 }
 
-TEST_F(DeepStackTest, double_emplace)
+TEST_F(PagedStackTest, double_emplace)
 {
-   Falcon::DeepStack<SomeStruct> emplacer;
+   Falcon::PagedStack<SomeStruct> emplacer;
 
    emplacer.push_emplace(0, "Hello world");
    emplacer.push_emplace(1, "Hello again");
@@ -192,7 +205,7 @@ TEST_F(DeepStackTest, double_emplace)
 
 }
 
-TEST_F(DeepStackTest, fill_one_buffer)
+TEST_F(PagedStackTest, fill_one_buffer)
 {
    m_stack.push(1, 2, 3, "top");
    EXPECT_STREQ("top", std::get<std::string>(m_stack.top()));
@@ -200,7 +213,7 @@ TEST_F(DeepStackTest, fill_one_buffer)
 }
 
 
-TEST_F(DeepStackTest, pure_pop)
+TEST_F(PagedStackTest, pure_pop)
 {
    m_stack.push("top");
    m_stack.push("discarded");
@@ -209,14 +222,14 @@ TEST_F(DeepStackTest, pure_pop)
    check_stats(2, 1, 1);
 }
 
-TEST_F(DeepStackTest, pure_pop_clear)
+TEST_F(PagedStackTest, pure_pop_clear)
 {
    m_stack.push("top");
    m_stack.pop();
    check_stats(2, 1, 0);
 }
 
-TEST_F(DeepStackTest, pop_first)
+TEST_F(PagedStackTest, pop_first)
 {
    m_stack.push("top");
    datatype value;
@@ -225,7 +238,7 @@ TEST_F(DeepStackTest, pop_first)
    check_stats(2, 1, 0);
 }
 
-TEST_F(DeepStackTest, pop_last)
+TEST_F(PagedStackTest, pop_last)
 {
    m_stack.push(1, 2, 3, "top");
    datatype value;
@@ -234,7 +247,7 @@ TEST_F(DeepStackTest, pop_last)
    check_stats(2, 1, 3);
 }
 
-TEST_F(DeepStackTest, pop_all)
+TEST_F(PagedStackTest, pop_all)
 {
    m_stack.push(1, 2, 3, "top");
    datatype v1, v2, v3, v4;
@@ -247,14 +260,14 @@ TEST_F(DeepStackTest, pop_all)
    check_stats(2, 1, 0);
 }
 
-TEST_F(DeepStackTest, next_buff)
+TEST_F(PagedStackTest, next_buff)
 {
    m_stack.push(1, 2, 3, 4, "top");
    EXPECT_STREQ("top", std::get<std::string>(m_stack.top()));
    check_stats(2, 2, 1);
 }
 
-TEST_F(DeepStackTest, pop_across_buffs)
+TEST_F(PagedStackTest, pop_across_buffs)
 {
    m_stack.push(1, 2, 3, 4, "top");
    EXPECT_STREQ("top", std::get<std::string>(m_stack.top()));
@@ -269,7 +282,7 @@ TEST_F(DeepStackTest, pop_across_buffs)
    check_stats(2, 1, 1);
 }
 
-TEST_F(DeepStackTest, realloc)
+TEST_F(PagedStackTest, realloc)
 {
    for(int i = 1; i <= 16; ++i ) {
       m_stack.push(i);
@@ -280,7 +293,7 @@ TEST_F(DeepStackTest, realloc)
    check_stats(6, 5, 1);
 }
 
-TEST_F(DeepStackTest, realloc_and_repush)
+TEST_F(PagedStackTest, realloc_and_repush)
 {
    m_stack.push("top");
    for(int i = 1; i <= 16; ++i ) {
@@ -295,7 +308,7 @@ TEST_F(DeepStackTest, realloc_and_repush)
    EXPECT_TRUE(m_stack.empty());
 }
 
-TEST_F(DeepStackTest, empty_and_repush)
+TEST_F(PagedStackTest, empty_and_repush)
 {
    m_stack.push("top");
    for(int i = 1; i <= 16; ++i ) {
@@ -322,7 +335,7 @@ TEST_F(DeepStackTest, empty_and_repush)
 }
 
 
-TEST_F(DeepStackTest, shrink)
+TEST_F(PagedStackTest, shrink)
 {
    m_stack.push("top");
    for(int i = 1; i <= 16; ++i ) {
@@ -343,7 +356,7 @@ TEST_F(DeepStackTest, shrink)
    EXPECT_EQ(9, std::get<int>(m_stack.top()));
 }
 
-TEST_F(DeepStackTest, shrink_and_reuse)
+TEST_F(PagedStackTest, shrink_and_reuse)
 {
    m_stack.push("top");
    for(int i = 1; i <= 16; ++i ) {
@@ -375,51 +388,51 @@ TEST_F(DeepStackTest, shrink_and_reuse)
 }
 
 
-TEST_F(DeepStackTest, direct_iterator)
+TEST_F(PagedStackTest, direct_iterator)
 {
    m_stack.push(1,2,3,4,5);
-   check_iterator<DeepStack::iterator>(5, 1,
+   check_iterator<PagedStack::iterator>(5, 1,
          [](int i){return i-1;}, [](int i){return i+1;},
          m_stack.begin(), m_stack.end());
 }
 
-TEST_F(DeepStackTest, direct_const_iterator)
+TEST_F(PagedStackTest, direct_const_iterator)
 {
    m_stack.push(1,2,3,4,5);
-   check_iterator<DeepStack::const_iterator>(5, 1,
+   check_iterator<PagedStack::const_iterator>(5, 1,
          [](int i){return i-1;}, [](int i){return i+1;},
          m_stack.cbegin(), m_stack.cend());
 }
 
-TEST_F(DeepStackTest, reverse_iterator)
+TEST_F(PagedStackTest, reverse_iterator)
 {
    m_stack.push(1,2,3,4,5);
-   check_iterator<DeepStack::reverse_iterator>(1, 5,
+   check_iterator<PagedStack::reverse_iterator>(1, 5,
          [](int i){return i+1;},
          [](int i){return i-1;},
          m_stack.rbegin(), m_stack.rend());
 }
 
-TEST_F(DeepStackTest, reverse_const_iterator)
+TEST_F(PagedStackTest, reverse_const_iterator)
 {
    m_stack.push(1,2,3,4,5);
-   check_iterator<DeepStack::const_reverse_iterator>(1, 5,
+   check_iterator<PagedStack::const_reverse_iterator>(1, 5,
          [](int i){return i+1;},
          [](int i){return i-1;},
          m_stack.crbegin(), m_stack.crend());
 }
 
 
-TEST_F(DeepStackTest, from_top)
+TEST_F(PagedStackTest, from_top)
 {
    m_stack.push(1,2,3,4,5,6);
-   check_iterator<DeepStack::reverse_iterator>(1, 6,
+   check_iterator<PagedStack::reverse_iterator>(1, 6,
          [](int i){return i+1;},
          [](int i){return i-1;},
          m_stack.from_top(6), m_stack.rend());
 }
 
-TEST_F(DeepStackTest, peek)
+TEST_F(PagedStackTest, peek)
 {
    m_stack.push("bottom", 1, 2, 3, "top");
 
@@ -434,7 +447,7 @@ TEST_F(DeepStackTest, peek)
    EXPECT_STREQ("top", std::get<std::string>( m_stack.top()));
 }
 
-TEST_F(DeepStackTest, peek_reverse_one)
+TEST_F(PagedStackTest, peek_reverse_one)
 {
    m_stack.push("bottom", 1, 2, 3, "top");
 
@@ -445,7 +458,7 @@ TEST_F(DeepStackTest, peek_reverse_one)
 }
 
 
-TEST_F(DeepStackTest, peek_reverse)
+TEST_F(PagedStackTest, peek_reverse)
 {
    m_stack.push("bottom", 1, 2, 3, "top");
 
@@ -458,7 +471,7 @@ TEST_F(DeepStackTest, peek_reverse)
    EXPECT_STREQ("bottom", std::get<std::string>(v1));
 }
 
-TEST_F(DeepStackTest, peek_depth)
+TEST_F(PagedStackTest, peek_depth)
 {
    m_stack.push("not read", "bottom", 1, 2, 3, "top");
 
@@ -471,7 +484,7 @@ TEST_F(DeepStackTest, peek_depth)
    EXPECT_STREQ("bottom", std::get<std::string>(v1));
 }
 
-TEST_F(DeepStackTest, discard_count)
+TEST_F(PagedStackTest, discard_count)
 {
    m_stack.push("new top", "bottom", 1, 2, 3, "top");
 
@@ -493,7 +506,7 @@ TEST_F(DeepStackTest, discard_count)
 }
 
 
-TEST_F(DeepStackTest, discard_direct)
+TEST_F(PagedStackTest, discard_direct)
 {
    m_stack.push("new top", "bottom", 1, 2, 3, "top");
 
@@ -518,7 +531,7 @@ TEST_F(DeepStackTest, discard_direct)
    EXPECT_TRUE(m_stack.empty());
 }
 
-TEST_F(DeepStackTest, discard_direct_all)
+TEST_F(PagedStackTest, discard_direct_all)
 {
    m_stack.push("new top", "bottom", 1, 2, 3, "top");
 
@@ -528,7 +541,7 @@ TEST_F(DeepStackTest, discard_direct_all)
    EXPECT_STREQ("new top", std::get<std::string>(m_stack.top()));
 }
 
-TEST_F(DeepStackTest, discard_reverse)
+TEST_F(PagedStackTest, discard_reverse)
 {
    m_stack.push("new top", "bottom", 1, 2, 3, "top");
 
@@ -538,7 +551,7 @@ TEST_F(DeepStackTest, discard_reverse)
    EXPECT_EQ(2, std::get<int>(m_stack.top()));
 }
 
-TEST_F(DeepStackTest, discard_reverse_all)
+TEST_F(PagedStackTest, discard_reverse_all)
 {
    m_stack.push("new top", "bottom", 1, 2, 3, "top");
 
@@ -548,7 +561,7 @@ TEST_F(DeepStackTest, discard_reverse_all)
 }
 
 
-TEST_F(DeepStackTest, pop_reverse)
+TEST_F(PagedStackTest, pop_reverse)
 {
    m_stack.push("new top", "bottom", 1, 2, 3, "top");
 
@@ -563,16 +576,15 @@ TEST_F(DeepStackTest, pop_reverse)
    EXPECT_STREQ("new top", std::get<std::string>(m_stack.top()));
 }
 
-TEST_F(DeepStackTest, allocator_smoke)
+TEST_F(PagedStackTest, allocator_smoke)
 {
    SharedMem dataAlloc;
    SharedMem pageAlloc;
 
-   using dstack = Falcon::DeepStack<int, TestAllocator>;
+   using dstack = Falcon::PagedStack<int, TestAllocator>;
    {
       auto testalloc = dstack(4,2,
-            dstack::allocator_type(&dataAlloc),
-            dstack::page_allocator_type(&pageAlloc));
+            dstack::allocator_type(&pageAlloc, &dataAlloc));
 
       EXPECT_EQ(2, dataAlloc.m_allocCount);
       EXPECT_EQ(8, dataAlloc.m_allocSize);
@@ -586,16 +598,14 @@ TEST_F(DeepStackTest, allocator_smoke)
    EXPECT_EQ(pageAlloc.m_deallocSize, pageAlloc.m_allocSize);
 }
 
-TEST_F(DeepStackTest, allocator)
+TEST_F(PagedStackTest, allocator)
 {
    SharedMem dataAlloc;
    SharedMem pageAlloc;
 
-   using dstack = Falcon::DeepStack<std::string, TestAllocator>;
+   using dstack = Falcon::PagedStack<std::string, TestAllocator>;
    {
-      auto testalloc = dstack(4,2,
-            dstack::allocator_type(&dataAlloc),
-            dstack::page_allocator_type(&pageAlloc));
+      auto testalloc = dstack(4,2, TestAllocator<dstack::value_type>(&pageAlloc, &dataAlloc));
 
       testalloc.push(
             "one", "two", "three", "four", /* page 1 */
@@ -633,4 +643,4 @@ TEST_F(DeepStackTest, allocator)
 
 FALCON_TEST_MAIN
 
-/* end of deepstack.fut.cpp */
+/* end of pagedstack.fut.cpp */

@@ -1,6 +1,6 @@
 /*****************************************************************************
   FALCON2 - The Falcon Programming Language
-  FILE: deepstack.h
+  FILE: pagedstack.h
 
   Growable Stack, ready for use in the engine
   -------------------------------------------------------------------
@@ -18,8 +18,8 @@
 #include <memory>
 #include <falcon/engine/distribute.h>
 
-#ifndef _FALCON_DEEPSTACK_H_
-#define _FALCON_DEEPSTACK_H_
+#ifndef _FALCON_PAGEDSTACK_H_
+#define _FALCON_PAGEDSTACK_H_
 
 namespace Falcon {
 /**
@@ -29,9 +29,8 @@ namespace Falcon {
 
 
 template<typename _T,
-template<typename> typename _Allocator=std::allocator,
-template<typename> typename _PageAllocator=_Allocator>
-class DeepStack
+	template<typename> typename _Allocator=std::allocator>
+class PagedStack
 {
 public:
    enum {
@@ -45,18 +44,13 @@ public:
    using allocator_type = _Allocator<_T>;
 private:
    using page_type = std::vector<_T, allocator_type>;
-
-public:
-   using page_allocator_type = _PageAllocator<page_type>;
-
-private:
+   using page_allocator_type = typename allocator_type::template rebind<page_type>::other;
    using base_type = std::list<page_type, page_allocator_type>;
    size_t m_pageSize{DEFAULT_PAGE_SIZE};
    size_t m_allocSize{DEFAULT_BASE_SIZE};
    base_type m_base;
    typename base_type::iterator m_curBase;
    allocator_type m_dataAllocator;
-   page_allocator_type m_pageAllocator;
 
    void growBase() {
       size_t count = m_allocSize;
@@ -181,11 +175,11 @@ private:
             m_iBaseEnd(end)
       {}
 
-      friend class DeepStack;
-
       _IBase m_iBase;
       _IData m_iData;
       _IBase m_iBaseEnd;
+
+      friend class PagedStack;
    };
 
    template<typename _TT, typename _IBase, typename _IData>
@@ -253,11 +247,10 @@ private:
             m_iBaseBegin(end)
       {}
 
-      friend class DeepStack;
-
       _IBase m_iBase;
       _IData m_iData;
       _IBase m_iBaseBegin;
+      friend class PagedStack;
    };
 
 public:
@@ -268,13 +261,11 @@ public:
    using const_reverse_iterator = reverse_iterator_base<const _T, typename base_type::const_iterator, typename page_type::const_iterator>;
 
 
-   DeepStack(size_t pageSize = DEFAULT_PAGE_SIZE, size_t prealloc = DEFAULT_BASE_SIZE,
-         const allocator_type& dataAllocator = allocator_type(),
-         const page_allocator_type& pageAllocator = page_allocator_type() ):
+   PagedStack(size_t pageSize = DEFAULT_PAGE_SIZE, size_t prealloc = DEFAULT_BASE_SIZE,
+         const allocator_type& dataAllocator = allocator_type() ):
             m_pageSize(pageSize),
             m_allocSize(prealloc),
-            m_base(pageAllocator),
-            m_pageAllocator(pageAllocator),
+            m_base(page_allocator_type(dataAllocator)),
             m_dataAllocator(dataAllocator)
    {
       growBase();
@@ -337,7 +328,7 @@ public:
    /**
     * Discards the N topmost elements of the stack.
     *
-    * DeepStack::discard(1) is equivalent to DeepStack::pop().
+    * PagedStack::discard(1) is equivalent to PagedStack::pop().
     * Discarding more elements than those currently in the stack has
     * undefined behavior.
     */
@@ -517,7 +508,6 @@ public:
    }
 
    allocator_type get_allocator() const noexcept { return m_dataAllocator;}
-   page_allocator_type get_page_allocator() const noexcept { return m_pageAllocator;}
 
    /**
     * Diagnostic
@@ -538,7 +528,7 @@ public:
 
 }
 
-#endif /* _FALCON_DEEPSTACK_H_ */
+#endif /* _FALCON_PAGEDSTACK_H_ */
 
-/* end of deepstack.h */
+/* end of pagedstack.h */
 
