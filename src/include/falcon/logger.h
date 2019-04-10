@@ -20,6 +20,7 @@
 #include <falcon/logstream.h>
 #include <falcon/logproxy.h>
 #include <falcon/singleton.h>
+#include <sstream>
 
 /** Compile-time log filter */
 #ifndef FALCON_MIN_LOG_LEVEL

@@ -14,7 +14,6 @@
 ******************************************************************************/
 
 #include <falcon/logger.h>
-#include <iostream>
 
 namespace Falcon {
 
