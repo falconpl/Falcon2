@@ -426,18 +426,84 @@ TEST_F(PagedStackTest, reverse_const_iterator)
 TEST_F(PagedStackTest, sync_iterator)
 {
    m_stack.push(1,2,3,4,5);
-   check_iterator<PagedStack::sync_iterator>(5, 1,
-		 [](int i){return i-1;}, [](int i){return i+1;},
-         m_stack.sync_begin(), m_stack.sync_end());
+   int i = 5;
+   for(auto iter = m_stack.sync_begin(); iter != m_stack.sync_end(); ++iter) {
+      datatype j;
+      iter.get(j);
+      EXPECT_EQ(i--, std::get<int>(j));
+   }
+
+   EXPECT_EQ(0, i);
+}
+
+TEST_F(PagedStackTest, sync_iterator_shrink)
+{
+   size_t blocks, depth, curBlock, curData;
+   // this test checks if the reverse iterator resists stack modification.
+   m_stack.push(1, 2, 3, 4, 5, "one", "two", "three");
+   {
+      auto si = m_stack.sync_begin();
+      datatype one, two, three;
+      m_stack.pop(three, two, one);
+      EXPECT_EQ("three", std::get<std::string>(three));
+      EXPECT_EQ("two", std::get<std::string>(two));
+      EXPECT_EQ("one", std::get<std::string>(one));
+
+      datatype svalue;
+      si.get(svalue); EXPECT_EQ(5, std::get<int>(svalue)); ++si;
+      si.get(svalue); EXPECT_EQ(4, std::get<int>(svalue)); ++si;
+      si.get(svalue); EXPECT_EQ(3, std::get<int>(svalue)); ++si;
+
+      datatype five, four;
+      m_stack.pop(five, four);
+      EXPECT_EQ(5, std::get<int>(five));
+      EXPECT_EQ(4, std::get<int>(four));
+
+      // The shrink-to-fit request will be fulfilled later.
+      m_stack.shrink_to_fit();
+      m_stack.getStats(blocks, depth, curBlock, curData);
+      EXPECT_EQ(blocks, 2);
+
+      int i = 2;
+      for(; si != m_stack.sync_end(); ++si) {
+         datatype j;
+         si.get(j);
+         EXPECT_EQ(i--, std::get<int>(j));
+      }
+      EXPECT_EQ(0, i);
+   }
+
+   m_stack.getStats(blocks, depth, curBlock, curData);
+   EXPECT_EQ(1, blocks);
 }
 
 
-TEST_F(PagedStackTest, const_sync_iterator)
+TEST_F(PagedStackTest, sync_iterator_jump_base)
 {
-   m_stack.push(1,2,3,4,5);
-   check_iterator<PagedStack::const_sync_iterator>(5, 1,
-		 [](int i){return i-1;}, [](int i){return i+1;},
-         m_stack.csync_begin(), m_stack.csync_end());
+   // this test checks if the reverse iterator resists stack modification.
+   for(int p = 0; p <= 16; ++p) {
+      m_stack.push(p);
+   }
+
+   auto si = m_stack.sync_begin();
+   int i = 16;
+   datatype svalue;
+
+   // jump two blocks.
+   for(; i >= 8; --i) {
+      si.get(svalue); EXPECT_EQ(i, std::get<int>(svalue)); ++si;
+   }
+
+   // discard one block
+   m_stack.discard(5);
+   // but we should still be in synch
+   si.get(svalue); EXPECT_EQ(7, std::get<int>(svalue)); ++si;
+
+   //Now discard the current block
+   m_stack.discard(8);
+   // we expect to jump and have the new top
+   si.get(svalue); EXPECT_EQ(3, std::get<int>(svalue)); ++si;
+   si.get(svalue); EXPECT_EQ(3, std::get<int>(m_stack.top())); ++si;
 }
 
 
