@@ -36,7 +36,8 @@ public:
    };
 
    using datatype = std::variant<int, std::string, SomeStruct>;
-   using PagedStack = Falcon::PagedStack<datatype>;
+   // Usinga mutex to check for deadlocks.
+   using PagedStack = Falcon::PagedStack<datatype, std::allocator, std::mutex>;
    PagedStack m_stack{4,2};
 
    void SetUp() {}
@@ -420,6 +421,23 @@ TEST_F(PagedStackTest, reverse_const_iterator)
          [](int i){return i+1;},
          [](int i){return i-1;},
          m_stack.crbegin(), m_stack.crend());
+}
+
+TEST_F(PagedStackTest, sync_iterator)
+{
+   m_stack.push(1,2,3,4,5);
+   check_iterator<PagedStack::sync_iterator>(5, 1,
+		 [](int i){return i-1;}, [](int i){return i+1;},
+         m_stack.sync_begin(), m_stack.sync_end());
+}
+
+
+TEST_F(PagedStackTest, const_sync_iterator)
+{
+   m_stack.push(1,2,3,4,5);
+   check_iterator<PagedStack::const_sync_iterator>(5, 1,
+		 [](int i){return i-1;}, [](int i){return i+1;},
+         m_stack.csync_begin(), m_stack.csync_end());
 }
 
 

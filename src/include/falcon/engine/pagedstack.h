@@ -17,6 +17,7 @@
 #include <cassert>
 #include <memory>
 #include <falcon/engine/distribute.h>
+#include <mutex>
 
 #ifndef _FALCON_PAGEDSTACK_H_
 #define _FALCON_PAGEDSTACK_H_
@@ -27,9 +28,16 @@ namespace Falcon {
  *
  */
 
+namespace{
+class dummy_mutex {
+public:
+	void lock() const volatile noexcept {};
+	void unlock() const volatile noexcept {};
+};
+}
 
 template<typename _T,
-	template<typename> typename _Allocator=std::allocator>
+	template<typename> typename _Allocator=std::allocator, typename _Mutex=dummy_mutex>
 class PagedStack
 {
 public:
@@ -43,6 +51,7 @@ public:
 
    using allocator_type = _Allocator<_T>;
 private:
+
    using page_type = std::vector<_T, allocator_type>;
    using page_allocator_type = typename allocator_type::template rebind<page_type>::other;
    using base_type = std::list<page_type, page_allocator_type>;
@@ -51,6 +60,7 @@ private:
    base_type m_base;
    typename base_type::iterator m_curBase;
    allocator_type m_dataAllocator;
+   mutable _Mutex m_mutex;
 
    void growBase() {
       size_t count = m_allocSize;
@@ -91,6 +101,7 @@ private:
    template<typename _IBase, typename _IData>
    void internal_discard(_IBase iBase, _IData iData)
    {
+      std::lock_guard<_Mutex> guard(m_mutex);
       while(m_curBase != iBase) {
          m_curBase->clear();
          --m_curBase;
@@ -108,6 +119,18 @@ private:
       else {
          m_curBase->resize(iData - m_curBase->begin());
       }
+   }
+
+   void internal_push(const _T& data) {
+      advance();
+      m_curBase->push_back(data);
+   }
+
+   template<typename... _Args>
+   void internal_push(const _T& data, _Args&&... __args) {
+      advance();
+      m_curBase->push_back(data);
+      internal_push(std::forward<_Args>(__args)...);
    }
 
    template<typename _TT, typename _IBase, typename _IData>
@@ -253,12 +276,31 @@ private:
       friend class PagedStack;
    };
 
+   template<typename _TT, typename _IBase, typename _IData>
+     class sync_iterator_base: public iterator_base< _TT, _IBase, _IData> {
+     public:
+	   sync_iterator_base(const sync_iterator_base& other):
+		   iterator_base< _TT, _IBase, _IData>(other)
+	   {}
+     private:
+	   sync_iterator_base(PagedStack const* owner,
+  			      const _IBase& iBase,
+  	              const _IData& iData,
+  	              const _IBase& end) noexcept:
+  				  iterator_base< _TT, _IBase, _IData>(iBase, iData, end)
+  	   {}
+
+
+  	   friend class PagedStack;
+     };
 public:
 
    using iterator = iterator_base<_T, typename base_type::iterator, typename page_type::iterator>;
    using const_iterator = iterator_base<const _T, typename base_type::const_iterator, typename page_type::const_iterator>;
    using reverse_iterator = reverse_iterator_base<_T, typename base_type::iterator, typename page_type::iterator>;
    using const_reverse_iterator = reverse_iterator_base<const _T, typename base_type::const_iterator, typename page_type::const_iterator>;
+   using sync_iterator = sync_iterator_base<_T, typename base_type::iterator, typename page_type::iterator>;
+   using const_sync_iterator = sync_iterator_base<const _T, typename base_type::const_iterator, typename page_type::const_iterator>;
 
 
    PagedStack(size_t pageSize = DEFAULT_PAGE_SIZE, size_t prealloc = DEFAULT_BASE_SIZE,
@@ -272,12 +314,12 @@ public:
       m_curBase = m_base.begin();
    }
 
-   _T& top() noexcept { return m_curBase->back(); }
-   const _T& top() const noexcept { return m_curBase->back(); }
+   _T& top() noexcept { std::lock_guard<_Mutex> guard(m_mutex); return m_curBase->back(); }
+   const _T& top() const noexcept { std::lock_guard<_Mutex> guard(m_mutex); return m_curBase->back(); }
 
    void push(const _T& data) {
-      advance();
-      m_curBase->push_back(data);
+      std::lock_guard<_Mutex> guard(m_mutex);
+      internal_push(data);
    }
 
    /**
@@ -287,9 +329,8 @@ public:
     */
    template<typename... _Args>
    void push(const _T& data, _Args&&... __args) {
-      advance();
-      m_curBase->push_back(data);
-      push(std::forward<_Args>(__args)...);
+      std::lock_guard<_Mutex> guard(m_mutex);
+      internal_push(data, std::forward<_Args>(__args)...);
    }
 
    /**
@@ -297,6 +338,7 @@ public:
     */
    template<typename... _Args>
    void push_emplace(_Args&&... __args)	{
+      std::lock_guard<_Mutex> guard(m_mutex);
       advance();
       // vector::emplace writes at the previous iterator.
       m_curBase->emplace_back(std::forward<_Args>(__args)...);
@@ -309,6 +351,7 @@ public:
     */
    void pop() {
       assert(!empty());
+      std::lock_guard<_Mutex> guard(m_mutex);
       internal_pop_one();
    }
 
@@ -322,6 +365,7 @@ public:
    template<typename... _Args>
    void pop(_T& value, _Args&&... __args) {
       assert(!empty());
+      std::lock_guard<_Mutex> guard(m_mutex);
       internal_pop(value, std::forward<_Args>(__args)...);
    }
 
@@ -334,6 +378,7 @@ public:
     */
    void discard(size_t count) noexcept {
       assert(count <= size());
+      std::lock_guard<_Mutex> guard(m_mutex);
       while(count >= m_curBase->size()) {
          count -= m_curBase->size();
          m_curBase->clear();
@@ -360,6 +405,8 @@ public:
    }
 
    void clear() noexcept {
+      //TODO: Swap base.
+      std::lock_guard<_Mutex> guard(m_mutex);
       while(m_curBase != m_base.begin()) {
          m_curBase->clear();
          --m_curBase;
@@ -373,8 +420,10 @@ public:
     * The topmost currently allocated page is not resized.
     */
    void shrink_to_fit() {
+      std::lock_guard<_Mutex> guard(m_mutex);
       typename base_type::iterator iter = m_curBase;
       ++iter;
+      // TODO: It would be nice to disengage the condemned elements and unlock.
       while(iter != m_base.end()) {
          iter = m_base.erase(iter);
       }
@@ -386,30 +435,36 @@ public:
     * The operation used to check the emptiness of the stack is simple, but not trivial.
     */
    bool empty() const noexcept {
+      std::lock_guard<_Mutex> guard(m_mutex);
       return m_curBase == m_base.begin() && m_curBase->empty();
    }
 
-   iterator begin() noexcept { return iterator(m_curBase, --m_curBase->end(), m_base.begin());}
-   const_iterator begin() const noexcept  { return const_iterator(m_curBase, --m_curBase->end(), m_base.cbegin());}
-   const_iterator cbegin() const noexcept { return begin();}
+   iterator begin() noexcept {std::lock_guard<_Mutex> guard(m_mutex); return iterator(m_curBase, --m_curBase->end(), m_base.begin());}
+   const_iterator begin() const noexcept  {std::lock_guard<_Mutex> guard(m_mutex); return const_iterator(m_curBase, --m_curBase->end(), m_base.cbegin());}
+   const_iterator cbegin() const noexcept {return begin();}
 
-   iterator end() noexcept { return iterator(m_base.begin(), --m_base.front().begin(), m_base.begin()); }
-   const_iterator end() const noexcept { return const_iterator(m_base.begin(), --m_base.front().begin(), m_base.cbegin()); }
-   const_iterator cend() const noexcept { return end(); }
+   iterator end() noexcept {std::lock_guard<_Mutex> guard(m_mutex); return iterator(m_base.begin(), --m_base.front().begin(), m_base.begin()); }
+   const_iterator end() const noexcept {std::lock_guard<_Mutex> guard(m_mutex); return const_iterator(m_base.begin(), --m_base.front().begin(), m_base.cbegin()); }
+   const_iterator cend() const noexcept {return end(); }
 
-   reverse_iterator rbegin() noexcept {return reverse_iterator(m_base.begin(), m_base.front().begin(), --m_base.end());}
-   const_reverse_iterator rbegin() const noexcept {return const_reverse_iterator(m_base.cbegin(), m_base.front().cbegin(), --m_base.cend());}
+   reverse_iterator rbegin() noexcept {std::lock_guard<_Mutex> guard(m_mutex); return reverse_iterator(m_base.begin(), m_base.front().begin(), --m_base.end());}
+   const_reverse_iterator rbegin() const noexcept {std::lock_guard<_Mutex> guard(m_mutex); return const_reverse_iterator(m_base.cbegin(), m_base.front().cbegin(), --m_base.cend());}
    const_reverse_iterator crbegin() const noexcept {return rbegin();}
 
-   reverse_iterator rend() noexcept{ return reverse_iterator(m_curBase, m_curBase->end(), m_curBase);}
-   const_reverse_iterator rend() const noexcept{ return const_reverse_iterator(m_curBase, m_curBase->end(), m_curBase);}
-   const_reverse_iterator crend() const noexcept{ return rend(); }
+   reverse_iterator rend() noexcept{std::lock_guard<_Mutex> guard(m_mutex); return reverse_iterator(m_curBase, m_curBase->end(), m_curBase);}
+   const_reverse_iterator rend() const noexcept{std::lock_guard<_Mutex> guard(m_mutex); return const_reverse_iterator(m_curBase, m_curBase->end(), m_curBase);}
+   const_reverse_iterator crend() const noexcept{return rend(); }
 
-   /**
-    * Return a reverse iterator from the nth- element to the top.
-    */
-   reverse_iterator from_top(size_t depth) noexcept {
-      assert(depth <= size());
+   sync_iterator sync_begin() noexcept {std::lock_guard<_Mutex> guard(m_mutex); return sync_iterator(this, m_curBase, --m_curBase->end(), m_base.begin());}
+   sync_iterator sync_end() noexcept {std::lock_guard<_Mutex> guard(m_mutex); return sync_iterator(this, m_base.begin(), --m_base.front().begin(), m_base.begin());}
+   const_sync_iterator sync_begin() const noexcept {std::lock_guard<_Mutex> guard(m_mutex); return const_sync_iterator(this, m_curBase, --m_curBase->cend(), m_base.cbegin());}
+   const_sync_iterator sync_end() const noexcept {std::lock_guard<_Mutex> guard(m_mutex); return const_sync_iterator(this, m_base.begin(), --m_base.front().cbegin(), m_base.cbegin());}
+   const_sync_iterator csync_begin() const noexcept {return sync_begin();}
+   const_sync_iterator csync_end() const noexcept {return sync_end();}
+
+private:
+
+   reverse_iterator internal_from_top(size_t depth) noexcept {
       typename base_type::iterator iBase = m_curBase;
       while(depth > iBase->size()) {
          depth -= iBase->size();
@@ -418,14 +473,31 @@ public:
       return reverse_iterator(iBase, iBase->begin() + (iBase->size() - depth), m_curBase);
    }
 
-   const_reverse_iterator from_top(size_t depth) const noexcept {
-      assert(depth <= size());
-      typename base_type::const_iterator iBase = m_curBase;
+
+   const_reverse_iterator internal_from_top(size_t depth) const noexcept {
+      typename base_type::iterator iBase = m_curBase;
       while(depth > iBase->size()) {
          depth -= iBase->size();
          iBase--;
       }
       return const_reverse_iterator(iBase, iBase->begin() + (iBase->size() - depth), m_curBase);
+   }
+
+public:
+
+   /**
+    * Return a reverse iterator from the nth- element to the top.
+    */
+   reverse_iterator from_top(size_t depth) noexcept {
+      assert(depth <= size());
+      std::lock_guard<_Mutex> guard(m_mutex);
+      return internal_from_top(depth);
+    }
+
+   const_reverse_iterator from_top(size_t depth) const noexcept {
+      assert(depth <= size());
+      std::lock_guard<_Mutex> guard(m_mutex);
+      return internal_from_top(depth);
    }
 
    /**
@@ -437,6 +509,7 @@ public:
    void peek(_Args&&... __args) const
    {
       assert(sizeof...(__args) <= size());
+      std::lock_guard<_Mutex> guard(m_mutex);
       distribute(cbegin(), std::forward<_Args>(__args)...);
    }
 
@@ -454,6 +527,7 @@ public:
    {
       assert(depth <= size());
       assert(depth >= sizeof...(__args));
+      std::lock_guard<_Mutex> guard(m_mutex);
       distribute(from_top(depth), std::forward<_Args>(__args)...);
    }
 
@@ -467,6 +541,7 @@ public:
    void peek_reverse(_Args&&... __args) const
    {
       assert(sizeof...(__args) <= size());
+      std::lock_guard<_Mutex> guard(m_mutex);
       distribute(from_top(sizeof...(__args)), std::forward<_Args>(__args)...);
    }
 
@@ -484,7 +559,8 @@ public:
    void pop_reverse(_Args&&... __args)
    {
       assert(sizeof...(__args) <= size());
-      auto pos = from_top(sizeof...(__args));
+      std::lock_guard<_Mutex> guard(m_mutex);
+      auto pos = internal_from_top(sizeof...(__args));
       auto start = pos;
       distribute(pos, std::forward<_Args>(__args)...);
       discard(start);
@@ -498,6 +574,7 @@ public:
 
    size_t size() const noexcept {
       size_t count = 0;
+      std::lock_guard<_Mutex> guard(m_mutex);
       auto iter = m_base.begin();
       while(iter != m_curBase) {
          count += iter->size();
@@ -513,6 +590,7 @@ public:
     * Diagnostic
     */
    void getStats(size_t& blocks, size_t& depth, size_t& curBlock, size_t& curData) const noexcept {
+      std::lock_guard<_Mutex> guard(m_mutex);
       blocks = m_base.size();
       depth = m_pageSize;
       typename base_type::const_iterator iter = m_base.begin();
