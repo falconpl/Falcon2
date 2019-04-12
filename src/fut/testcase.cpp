@@ -181,25 +181,29 @@ void TestCase::destroy()
 }
 
 
-void TestCase::beginTest()
+void TestCase::beginTest(bool capture)
 {
    // saving the standard buffers
-   p->outbuf = std::cout.rdbuf();
-   p->errbuf = std::cerr.rdbuf();
-   std::cout.rdbuf(p->outCapture.rdbuf());
-   std::cerr.rdbuf(p->errCapture.rdbuf());
+   if (capture) {
+      p->outbuf = std::cout.rdbuf();
+      p->errbuf = std::cerr.rdbuf();
+      std::cout.rdbuf(p->outCapture.rdbuf());
+      std::cerr.rdbuf(p->errCapture.rdbuf());
+   }
 
    p->status = NONE;
 }
 
-void TestCase::endTest()
+void TestCase::endTest(bool capture)
 {
    // When done redirect cout to its old self
-   std::cout.rdbuf(p->outbuf);
-   std::cerr.rdbuf(p->errbuf);
+   if(capture){
+      std::cout.rdbuf(p->outbuf);
+      std::cerr.rdbuf(p->errbuf);
 
-   p->outCaptureStr = p->outCapture.str();
-   p->errCaptureStr = p->errCapture.str();
+      p->outCaptureStr = p->outCapture.str();
+      p->errCaptureStr = p->errCapture.str();
+   }
 }
 
 void TestCase::run()
