@@ -55,8 +55,8 @@ public:
 
    virtual void init();
    virtual void destroy();
-   void beginTest();
-   void endTest();
+   void beginTest(bool capture);
+   void endTest(bool capture);
 
    /* Invoked by UnitTest::main() */
    void run();
