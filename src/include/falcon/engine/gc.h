@@ -15,8 +15,10 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <type_traits>
-
+#include <falcon/futex.h>
+#include <vector>
 
 #ifndef _FALCON_GC_H_
 #define _FALCON_GC_H_
@@ -28,71 +30,132 @@ class GarbageCollector
 public:
 	GarbageCollector(){}
 	~GarbageCollector(){
-		// At descrution, we don't clear the rings: we just free the arena.
+		// At destrcution, we don't clear the rings: we just free the arena.
 	}
 
-	template<typename _T>
-	struct traits {
-		using pointer = _T*;
-		using reference = _T&;
-		using const_pointer = const _T*;
-		using const_reference = const _T&;
-	};
 
-	using pointer = traits<void *>::pointer;
-	using Deletor = void(*)(pointer);
-	using Marker = void(*)(pointer);
-	pointer getMemory(size_t size, Deletor deletor=nullptr, Marker marker=nullptr)
+	/**
+	 * An ABC that is associated with created memory.
+	 */
+   class Handler {
+   public:
+      virtual void destroy(void* target) noexcept=0;
+      virtual void mark(void* target, GarbageCollector* owner) noexcept=0;
+   };
+
+	/**
+	 * Get raw memory from the garbae collector
+	 */
+	void *getMemory(size_t size, Handler* memoryHandler=nullptr)
 	{
-		AlignedEntry* ring = createEntry(size, deletor, marker);
-		return reinterpret_cast<pointer>(ring+1);
+		GCEntry* ring = createEntry(size, memoryHandler);
+		return reinterpret_cast<void *>(ring+1);
 	}
 
-	template<typename _T> traits<_T>::pointer getData(size_t count, Deletor deletor=nullptr, Marker marker=nullptr)
-	{
-		return static_cast<traits<_T>::pointer(getMemory(count*sizeof(_T), deletor, marker));
-	}
+	/**
+	 * Get a typed storage correctly sized to store a certain count of items.
+	 */
+   template<typename _TT>
+   auto getDataBuffer(size_t count, Handler* memoryHandler=nullptr)
+   {
+      return static_cast<_TT *>(getMemory(count*sizeof(_TT), memoryHandler));
+   }
 
-	bool isGC(pointer data){
-		// test.
-		return true;
-	}
+   /**
+    * Get a typed pointer.
+    */
+   template<typename _TT>
+   auto getDataMemory(Handler* memoryHandler=nullptr)
+   {
+      return static_cast<_TT*>(getMemory(sizeof(_TT), memoryHandler));
+   }
+
+   struct Stats{
+      size_t all_blocks;
+      size_t all_allocated;
+      size_t white_blocks;
+      size_t white_allocated;
+      size_t gray_blocks;
+      size_t gray_allocated;
+      size_t black_blocks;
+      size_t black_allocated;
+   };
+
+
+   Stats getStats() const
+   {
+      Stats s;
+      std::lock_guard guard(m_ringLock);
+      s.all_blocks = m_ringStats[e_no_mark].blocks;
+      s.all_allocated = m_ringStats[e_no_mark].allocated;
+      s.white_blocks = m_ringStats[e_white_mark].blocks;
+      s.white_allocated = m_ringStats[e_white_mark].allocated;
+      s.gray_blocks = m_ringStats[e_gray_mark].blocks;
+      s.gray_allocated = m_ringStats[e_gray_mark].allocated;
+      s.black_blocks = m_ringStats[e_black_mark].blocks;
+      s.black_allocated = m_ringStats[e_black_mark].allocated;
+      return s;
+   }
+
+   void mark(void* data) const noexcept {
+      GCEntry* entry =  static_cast<GCEntry*>(data);
+      entry--;
+      moveToGray(data);
+   }
+
+   void release(void* data) const noexcept {
+      GCEntry* entry =  static_cast<GCEntry*>(data);
+      entry--;
+      entry->unlock();
+   }
 
 private:
 
-	using mark_color_t = short int;
-	size_t m_allocated{0};
-	size_t m_allocatedBlocks{0};
-	mark_color_t m_blackMark{2};
+	mutable Futex<1> m_mtxHandlers;
+	std::vector<std::unique_ptr<Handler>> m_handlers;
 
-	mark_color_t whiteMark() const {return m_blackMark == 0 ? 2 : 0;}
-	mark_color_t grayMark() const {return 1;}
-	mark_color_t blackMark() const {return m_blackMark; }
+	typedef enum {
+	   e_no_mark=0,
+	   e_white_mark=1,
+	   e_gray_mark=2,
+	   e_black_mark=3
+	}
+	mark_color_t;
+
+	struct StatEntry {
+	   size_t allocated;
+	   size_t blocks;
+	};
+	mutable std::vector<StatEntry> m_ringStats{{0,0}, {0,0}, {0,0}, {0,0}};
 
 	struct GCEntry {
-		size_t m_size{0};
-		bool m_locked{false};
-		mark_color_t m_mark{0};
 		GCEntry* m_next{this};
 		GCEntry* m_prev{this};
-		Deletor m_deletor{nullptr};
-		Marker m_marker{nullptr};
+		Handler* m_handler{nullptr};
+      unsigned int m_size{0};
+      std::atomic<bool> m_locked{true};
+      char m_mark{e_no_mark};
 
-		GCEntry(size_t size, Deletor deletor, Marker marker, bool locked=false):
-			m_size(size), m_deletor(deletor), m_marker(marker), m_locked(locked)
+      //Entries are born locked, and get unlocked as the owner assigns them.
+		GCEntry(size_t size, Handler* handler=nullptr, bool locked=true) noexcept:
+			m_size(size), m_handler(handler), m_locked(locked)
 		{}
-		GCEntry() = default;
-		GCEntry(const GCEntry&) = delete;
-		GCEntry(GCEntry&&) = delete;
 
-		void insert(GCEntry* prev, GCEntry* next) {
+		GCEntry() = default;
+		GCEntry(const GCEntry& other) = default;
+		GCEntry(GCEntry&&) = default;
+
+		void insert(GCEntry* prev, GCEntry* next) noexcept {
 			prev->m_next = this;
 			next->m_prev = this;
 			this->m_next = next;
 			this->m_prev = prev;
 		}
 
-		void chain(GCEntry* new_prev) {
+		/** Moves the whole ring (one element or more) inside a new one.
+		 *
+		 */
+		void chain(GCEntry* new_prev) noexcept {
 			// currently, the last element of the ring points to this.
 			// -- link it with the next of the other ring's element.
 			m_prev->m_next = new_prev->m_next;
@@ -103,7 +166,18 @@ private:
 			m_prev = new_prev;
 		}
 
-		void extract() {
+		/**
+		 * Move all the chain AROUND this entry to the target ring.
+		 */
+		void transfer(GCEntry* target) noexcept {
+		   // create a ring extracting this.
+		   GCEntry* head = m_next;
+		   extract();
+		   // chain the previous head to target
+		   head->chain(target);
+      }
+
+		void extract() noexcept {
 			m_prev->m_next = m_next;
 			m_next->m_prev = m_prev;
 			m_next = m_prev = this;
@@ -117,128 +191,144 @@ private:
 			return m_size ;
 		}
 
-		void lock() const noexcept {
-			m_locked = true;
+		void lock() noexcept {
+         m_locked.store(true, std::memory_order_release);
 		}
 
-		void unlock() const noexcept {
-			m_locked = false;
+		void unlock() noexcept {
+			m_locked.store(false, std::memory_order_release);
+		}
+
+		bool isLocked() const noexcept {
+		   return m_locked.load(std::memory_order_acquire);
 		}
 
 		mark_color_t mark() const noexcept {
-			return m_mark;
+			return static_cast<mark_color_t>(m_mark);
 		}
 
 		void mark(mark_color_t m) noexcept {
-			return m_mark = m;
+			m_mark = m;
 		}
 	};
 
-	using AlignedEntry = std::aligned_storage<sizeof(GCEntry), alignof(GCEntry)>::type;
+	// We want GCEntry to be within a block size
+	static_assert(sizeof(GCEntry) <= 32);
 
-	mutable std::atomic<bool> m_ringLock{false};
+	mutable Futex<1> m_ringLock;
 	// Store the rings locally, so we can easily get rid of them.
-	AlignedEntry m_ring1;
-	AlignedEntry m_ring2;
-	AlignedEntry m_ring3;
+	GCEntry m_ring1;
+	GCEntry m_ring2;
+	GCEntry m_ring3;
 
 	// use pointers
-	GCEntry* m_whiteRing{&m_ring3};
-	GCEntry* m_grayRing{&m_ring3};
+	GCEntry* m_whiteRing{&m_ring1};
+	GCEntry* m_grayRing{&m_ring2};
 	GCEntry* m_blackRing{&m_ring3};
 
 
-
-	void lockRings() const {
-		bool value = false;
-		while(!m_ringLock.compare_exchange_weak(value, true));
-	}
-
-	void unlockRings() const {
-		m_ringLock = false;
-	}
-
-	AlignedEntry* createEntry(size_t size, Deletor deletor, Marker marker)
+	GCEntry* createEntry(size_t size, Handler* handler=nullptr)
 	{
 		// for a test, use new/delete
-		AlignedEntry* entry = allocEntry(size, deletor, marker);
-		entry->mark(grayMark());
-		lockRings();
-		m_allocated += size;
-		m_allocatedBlocks += 1;
+		GCEntry* entry = allocEntry(size, handler);
+		entry->mark(e_gray_mark);
+
+		std::lock_guard guard(m_ringLock);
+		m_ringStats[e_no_mark].allocated += size;
+		m_ringStats[e_no_mark].blocks += 1;
+      m_ringStats[e_gray_mark].allocated += size;
+      m_ringStats[e_gray_mark].blocks += 1;
 		entry->chain(m_grayRing);
-		unlockRings();
 		return entry;
 	}
 
-	void releaseEntry(AlignedEntry* entry) {
-		lockRings();
-		m_allocated -= entry->m_size;
-		m_allocatedBlocks -= 1;
+	void releaseEntry(GCEntry* entry) {
+	   std::lock_guard guard(m_ringLock);
+      m_ringStats[e_no_mark].allocated -= entry->m_size;
+      m_ringStats[e_no_mark].blocks -= 1;
+      m_ringStats[entry->mark()].allocated -= entry->m_size;
+      m_ringStats[entry->mark()].blocks -= 1;
 		entry->extract();
-		unlockRings();
 		recycleEntry(entry);
 	}
 
 	// This plugs directly in the memory manager.
-	AlignedEntry* allocEntry(size_t size, Deletor deletor, Marker marker) {
-		return new AlignedEntry(size, deletor, marker);
+	GCEntry* allocEntry(size_t size, Handler* handler) {
+		void *data = ::operator new(size + sizeof(GCEntry));
+		return new(data) GCEntry(size, handler);
 	}
 
 	// This plugs directly in the memory manager.
-	void recycleEntry(AlignedEntry* entry) {
+	void recycleEntry(GCEntry* entry) {
 		//  give the entry an opportunity to self-destruct
-		if(entry->m_deletor) {
-			entry->m_deletor(entrty + 1);
+		if(entry->m_handler) {
+			entry->m_handler->destroy(entry + 1);
 		}
-		// todo: arena->recycle
-		delete entry;
+
+		// TODO: arena->recycle
+		entry->~GCEntry();
+		::operator delete(entry, entry->m_size + sizeof(GCEntry));
 	}
 
-	// called at the end of the collection loop.
+	/**
+	 * Move all the black entries to the white ring.
+	 *
+	 * This marks the beginning of a new scan.
+	 */
 	void swapRings() {
-		lockRings();
-		std::swap(m_whiteRing, m_blackRing);
-		unlockRings();
-		// GC is the only user of the mark byte.
-		m_blackMark == 0 ? 2 : 0;
+	   std::lock_guard guard(m_ringLock);
+	   m_blackRing->transfer(m_whiteRing);
+	   m_ringStats[e_white_mark].allocated += m_ringStats[e_black_mark].allocated ;
+      m_ringStats[e_white_mark].blocks += m_ringStats[e_black_mark].blocks ;
+      m_ringStats[e_black_mark].allocated = 0;
+      m_ringStats[e_black_mark].blocks = 0 ;
 	}
 
 	void collect() {
+	   // GC is the only user of the white ring (and its stats).
 		collect(m_whiteRing);
+		// but not of its stats.
+		std::lock_guard guard(m_ringLock);
+		m_ringStats[e_white_mark].allocated = 0;
+		m_ringStats[e_white_mark].blocks += 0;
 	}
 
 	// Exposing a collect that can work on any ring, in order to implement
 	// a debug clear-all-at-end.
 	// -- Normally, at end we just dispose of the allocation arena.
-	void collect(AlignedEntry* root) {
+	void collect(GCEntry* root) {
 		// only the gray and the black rings are shared; white ring is for GC only.
-		AlignedEntry *current = root->m_next;
+		GCEntry *current = root->m_next;
 		while(current != root) {
-			AlignedEntry* old = current;
+			GCEntry* old = current;
 			current = current->m_next;
 			recycleEntry(old);
 		}
 
-		// clear the white ring
+		// clear the owner ring
 		root->m_prev = m_whiteRing->m_next = m_whiteRing;
 	}
 
-
-	void moveToRing(mark_color_t color, AlignedEntry* entry, pointer data)
+	void moveToRing(mark_color_t color, GCEntry* ring, void* data) const noexcept
 	{
-		GCEntry* entry = static_cast<AlignedEntry*>(data)-1;
-		if(entry->mark() != color) {
-			lockRings();
-			entry->extract();
-			entry->chain(m_grayRing);
-			unlockRings();
-			entry->mark(color);
+		GCEntry* nentry = static_cast<GCEntry*>(data)-1;
+		if(nentry->mark() != color) {
+		   // lock
+		   std::lock_guard guard(m_ringLock);
+		   // account
+         m_ringStats[color].allocated += nentry->size();
+         m_ringStats[color].blocks += 1;
+         m_ringStats[nentry->mark()].allocated -= nentry->size();
+         m_ringStats[nentry->mark()].blocks -= 1;
+         // swap
+		   nentry->extract();
+		   nentry->chain(ring);
+		   nentry->mark(color);
 		}
 	}
 
-	void moveToGray(pointer data) {moveToRing(grayMark(), m_grayRing, data);}
-	void moveToBlack(pointer data) {moveToRing(grayMark(), m_grayRing, data);}
+	void moveToGray(void* data) const noexcept {moveToRing(e_gray_mark, m_grayRing, data);}
+	void moveToBlack(void* data) const noexcept {moveToRing(e_black_mark, m_blackRing, data);}
 };
 
 }
