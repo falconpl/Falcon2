@@ -51,33 +51,6 @@ public:
 
    };
 
-	/**
-	 * Get raw memory from the garbae collector
-	 */
-	void *getMemory(size_t size, Handler* memoryHandler=nullptr)
-	{
-		GCEntry* ring = createEntry(size, memoryHandler);
-		return reinterpret_cast<void *>(ring+1);
-	}
-
-	/**
-	 * Get a typed storage correctly sized to store a certain count of items.
-	 */
-   template<typename _TT>
-   auto getDataBuffer(size_t count, Handler* memoryHandler=nullptr)
-   {
-      return static_cast<_TT *>(getMemory(count*sizeof(_TT), memoryHandler));
-   }
-
-   /**
-    * Get a typed pointer.
-    */
-   template<typename _TT>
-   auto getDataMemory(Handler* memoryHandler=nullptr)
-   {
-      return static_cast<_TT*>(getMemory(sizeof(_TT), memoryHandler));
-   }
-
    struct Stats{
       size_t all_blocks;
       size_t all_allocated;
@@ -108,16 +81,13 @@ public:
    void mark(void* data) const noexcept {
       GCEntry* entry =  static_cast<GCEntry*>(data);
       entry--;
-      moveToGray(data);
+      moveToGray(entry);
    }
 
-   void release(void* data) const noexcept {
-      GCEntry* entry =  static_cast<GCEntry*>(data);
-      entry--;
-      entry->unlock();
-   }
 
 private:
+
+   friend class Grabber;
 
 	mutable Futex<1> m_mtxHandlers;
 	std::vector<std::unique_ptr<Handler>> m_handlers;
@@ -137,12 +107,12 @@ private:
 	mutable std::vector<StatEntry> m_ringStats{{0,0}, {0,0}, {0,0}, {0,0}};
 
 	struct GCEntry {
-		GCEntry* m_next{this};
-		GCEntry* m_prev{this};
-		Handler* m_handler{nullptr};
-      unsigned int m_size{0};
-      std::atomic<bool> m_locked{true};
-      char m_mark{e_no_mark};
+	   GCEntry* m_next{this};
+	   GCEntry* m_prev{this};
+	   Handler* m_handler{nullptr};
+       unsigned int m_size{0};
+       std::atomic<bool> m_locked{false};
+       char m_mark{e_no_mark};
 
       //Entries are born locked, and get unlocked as the owner assigns them.
 		GCEntry(size_t size, Handler* handler=nullptr, bool locked=true) noexcept:
@@ -183,7 +153,19 @@ private:
 		   extract();
 		   // chain the previous head to target
 		   head->chain(target);
-      }
+       }
+
+		/**
+		 * Reclaim all the nodes AROUND this node.
+		 */
+		void clear(GarbageCollector* owner) {
+		   GCEntry* root = m_next;
+		   while(root != this) {
+		      GCEntry* old = root;
+		      root = root->m_next;
+		      owner->recycleEntry(old);
+		   }
+		}
 
 		void extract() noexcept {
 			m_prev->m_next = m_next;
@@ -234,7 +216,6 @@ private:
 	GCEntry* m_grayRing{&m_ring2};
 	GCEntry* m_blackRing{&m_ring3};
 
-
 	GCEntry* createEntry(size_t size, Handler* handler=nullptr)
 	{
 		// for a test, use new/delete
@@ -244,8 +225,8 @@ private:
 		std::lock_guard guard(m_ringLock);
 		m_ringStats[e_no_mark].allocated += size;
 		m_ringStats[e_no_mark].blocks += 1;
-      m_ringStats[e_gray_mark].allocated += size;
-      m_ringStats[e_gray_mark].blocks += 1;
+		m_ringStats[e_gray_mark].allocated += size;
+		m_ringStats[e_gray_mark].blocks += 1;
 		entry->chain(m_grayRing);
 		return entry;
 	}
@@ -287,9 +268,9 @@ private:
 	   std::lock_guard guard(m_ringLock);
 	   m_blackRing->transfer(m_whiteRing);
 	   m_ringStats[e_white_mark].allocated += m_ringStats[e_black_mark].allocated ;
-      m_ringStats[e_white_mark].blocks += m_ringStats[e_black_mark].blocks ;
-      m_ringStats[e_black_mark].allocated = 0;
-      m_ringStats[e_black_mark].blocks = 0 ;
+       m_ringStats[e_white_mark].blocks += m_ringStats[e_black_mark].blocks ;
+       m_ringStats[e_black_mark].allocated = 0;
+       m_ringStats[e_black_mark].blocks = 0 ;
 	}
 
 	void collect() {
@@ -324,11 +305,11 @@ private:
 		   // lock
 		   std::lock_guard guard(m_ringLock);
 		   // account
-         m_ringStats[color].allocated += nentry->size();
-         m_ringStats[color].blocks += 1;
-         m_ringStats[nentry->mark()].allocated -= nentry->size();
-         m_ringStats[nentry->mark()].blocks -= 1;
-         // swap
+           m_ringStats[color].allocated += nentry->size();
+           m_ringStats[color].blocks += 1;
+           m_ringStats[nentry->mark()].allocated -= nentry->size();
+           m_ringStats[nentry->mark()].blocks -= 1;
+           // swap
 		   nentry->extract();
 		   nentry->chain(ring);
 		   nentry->mark(color);
@@ -337,6 +318,125 @@ private:
 
 	void moveToGray(void* data) const noexcept {moveToRing(e_gray_mark, m_grayRing, data);}
 	void moveToBlack(void* data) const noexcept {moveToRing(e_black_mark, m_blackRing, data);}
+
+public:
+
+    /**
+     * Safe staged allocator for objects.
+     *
+     * Allocation in the garbage collector are performed through the agency
+     * of this class. The grabber stores all the created entities
+     * atomically in the garbage collector; this allow the construction of complex,
+     * and their correct initialization, in a safe area, protected the collector
+     * inspection and activity, until the objects are coherently constructed.
+     *
+     * Normally, the grabber will commit all the allocated blocks to the garbage
+     * collector at its destruction, unless the isSafe parameter of its constructor
+     * is false.
+     *
+     * In non-safe mode, the method commit() must be explicitly
+     * called, or the destructor of the Grabber will abort the program (in debug),
+     * or discard all the information generated (in release code).
+     *
+     * This is to prevent partially constructed objects (for example after throwing
+     * and exception) to reach the garbage collector, where it would cause
+     * undefined behavior later on, during scan or collection, that would be
+     * extremely hard to trace back to the original cause.
+     *
+     * In case the constructed objects are coherent at each step of the creation,
+     * or exceptions are correctly handled, the grabber can be created in safe mode,
+     * and the commit() method doesn't need to be explicitly called.
+     *
+     * Requesting further allocation after having invoked commit will assert, or
+     * an exception will be thrown.
+     *
+     */
+    class Grabber
+    {
+    public:
+       Grabber() = delete;
+       Grabber(GarbageCollector& owner, bool isSafe=true):
+          m_owner(&owner), m_safe(isSafe)
+       {}
+       Grabber(const Grabber&) = delete;
+       Grabber(Grabber&& other):
+          m_owner(std::move(other.m_owner)),
+          m_safe(other.m_safe),
+          m_allocated(other.m_allocated),
+          m_blocks(other.m_blocks)
+       {
+          assert(!other.m_committed);
+          // TODO: Throw a personalised exception
+         if(other.m_committed) {
+            throw std::runtime_error("Grabber: can't move from a committed grabber");
+         }
+          other.m_ringRoot.transfer(&m_ringRoot);
+       }
+
+       ~Grabber() {
+          if(m_safe) {
+             commit();
+          }
+          else {
+             assert(m_committed);
+             m_ringRoot.clear(m_owner);
+          }
+       }
+
+        /**
+         * Get raw memory from the garbae collector
+         */
+        void *getMemory(size_t size, Handler* handler=nullptr)
+        {
+           // TODO: Throw a personalised exception
+           if(m_committed) {
+              throw std::runtime_error("Grabber: allocation after commit");
+           }
+           GCEntry* ring = m_owner->allocEntry(size, handler);
+           m_allocated += size;
+           ++m_blocks;
+           return reinterpret_cast<void *>(ring+1);
+        }
+
+        /**
+         * Get a typed storage correctly sized to store a certain count of items.
+         */
+       template<typename _TT>
+       auto getDataBuffer(size_t count, Handler* memoryHandler=nullptr)
+       {
+          return static_cast<_TT *>(getMemory(count*sizeof(_TT), memoryHandler));
+       }
+
+       /**
+        * Get a typed pointer.
+        */
+       template<typename _TT>
+       auto getDataMemory(Handler* memoryHandler=nullptr)
+       {
+          return static_cast<_TT*>(getMemory(sizeof(_TT), memoryHandler));
+       }
+
+       void commit() {
+          if(! m_committed) {
+             m_committed = true;
+
+             std::lock_guard guard(m_owner->m_ringLock);
+             m_ringRoot.transfer(m_owner->m_grayRing);
+             m_owner->m_ringStats[e_no_mark].allocated += m_allocated;
+             m_owner->m_ringStats[e_no_mark].blocks += m_blocks;
+             m_owner->m_ringStats[e_gray_mark].allocated += m_allocated;
+             m_owner->m_ringStats[e_gray_mark].blocks += m_blocks;
+          }
+       }
+
+    private:
+       GarbageCollector* m_owner;
+       bool m_committed{false};
+       bool m_safe;
+       GCEntry m_ringRoot;
+       size_t m_allocated{0};
+       unsigned int m_blocks{0};
+    };
 };
 
 }

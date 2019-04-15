@@ -50,14 +50,8 @@ public:
       {}
    };
 
-   Handler m_handler;
 
-
-   void SetUp() {
-      void* memory = m_gc.getMemory(sizeof(std::vector<void*>), &m_handler);
-      m_handler.m_allocated = new(memory) std::vector<void*>;
-   }
-
+   void SetUp() {}
    void TearDown() {}
 
    GCTest(){}
@@ -76,7 +70,11 @@ TEST_F(GCTest, smoke)
 TEST_F(GCTest, smoke2)
 {
    GarbageCollector gc;
-   size_t* allocated = gc.getDataBuffer<size_t>(2);
+   size_t* allocated;
+   {
+      GarbageCollector::Grabber grabber(gc);
+      allocated = grabber.getDataBuffer<size_t>(2);
+   }
    GarbageCollector::Stats stats = gc.getStats();
    EXPECT_EQ(sizeof(size_t)*2, stats.all_allocated);
    EXPECT_EQ(1, stats.all_blocks);
@@ -90,10 +88,17 @@ TEST_F(GCTest, smoke2)
 
 TEST_F(GCTest, smoke3)
 {
-   for(int i = 0; i < 10; ++i){
-      m_handler.m_allocated->push_back(m_gc.getDataBuffer<int>(1));
-      *static_cast<int*>(m_handler.m_allocated->back()) = i;
-      m_gc.release(m_handler.m_allocated->back());
+   Handler handler;
+
+   {
+      GarbageCollector::Grabber grabber(m_gc);
+
+      void* memory = grabber.getMemory(sizeof(std::vector<void*>), &handler);
+      handler.m_allocated = new(memory) std::vector<void*>;
+      for(int i = 0; i < 10; ++i){
+         handler.m_allocated->push_back(grabber.getDataBuffer<int>(1));
+         *static_cast<int*>(handler.m_allocated->back()) = i;
+      }
    }
 
    GarbageCollector::Stats stats = m_gc.getStats();
