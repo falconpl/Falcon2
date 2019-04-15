@@ -45,6 +45,9 @@ public:
          }
          m_marked ++;
       }
+
+      virtual void relocate(void* source, void *target) noexcept override
+      {}
    };
 
    Handler m_handler;

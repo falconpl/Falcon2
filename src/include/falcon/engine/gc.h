@@ -36,11 +36,19 @@ public:
 
 	/**
 	 * An ABC that is associated with created memory.
+	 *
+	 * To avoid double dereference in the virtual call,
+	 * do not use data members in sub-classes (just use
+	 * the handled items themselves to keep track of any
+	 * needed status information).
 	 */
    class Handler {
    public:
+      virtual ~Handler() {};
       virtual void destroy(void* target) noexcept=0;
       virtual void mark(void* target, GarbageCollector* owner) noexcept=0;
+      virtual void relocate(void* source, void *target) noexcept=0;
+
    };
 
 	/**
