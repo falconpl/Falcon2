@@ -206,6 +206,20 @@ TEST_F(PagedStackTest, double_emplace)
 
 }
 
+TEST_F(PagedStackTest, top)
+{
+   Falcon::PagedStack<SomeStruct> emplacer;
+
+   emplacer.push_emplace(0, "Hello world");
+   EXPECT_FALSE(emplacer.empty());
+   emplacer.top({1, "Changed"});
+   const SomeStruct& top = emplacer.top();
+
+   EXPECT_EQ(1, top.alpha );
+   EXPECT_STREQ("Changed", top.beta);
+
+}
+
 TEST_F(PagedStackTest, fill_one_buffer)
 {
    m_stack.push(1, 2, 3, "top");

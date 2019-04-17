@@ -431,7 +431,7 @@ public:
       m_curBase = m_base.begin();
    }
 
-   _T& top() noexcept { std::lock_guard<_Mutex> guard(m_mutex); return m_curBase->back(); }
+   void top(const _T& value) noexcept { std::lock_guard<_Mutex> guard(m_mutex); m_curBase->back() = value; }
    const _T& top() const noexcept { std::lock_guard<_Mutex> guard(m_mutex); return m_curBase->back(); }
 
    void push(const _T& data) {
