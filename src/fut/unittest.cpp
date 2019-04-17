@@ -68,6 +68,7 @@ public:
    int status;
    int screenWidth;
    int failedCount;
+   bool m_capture{true};
 
    bool opt_erroutIsFail;
    UnitTest::t_verbosity verbosity;
@@ -152,12 +153,12 @@ void UnitTest::beginTest(int count, TestCase* tc)
       writeTestName(count, tc->fullName(), "GO");
    }
 
-   tc->beginTest();
+   tc->beginTest(p->m_capture);
 }
 
 void UnitTest::endTest(int count, TestCase* tc)
 {
-   tc->endTest();
+   tc->endTest(p->m_capture);
 
    if(tc->capturedOut()[0]
       && (p->verbosity >= REPORT_STDOUT || (p->verbosity > SILENT && !hasPassed(tc)))) {
@@ -338,6 +339,10 @@ int UnitTest::parseParams(int argc, char* argv[])
          setVerbosity(SILENT);
          continue;
       }
+      else if(opt == "-c") {
+         p->m_capture = false;
+         continue;
+      }
       else if(opt == "-e") {
          p->opt_erroutIsFail = true;
          continue;
@@ -391,6 +396,7 @@ int UnitTest::parseParams(int argc, char* argv[])
 
 void UnitTest::usage() {
 	std::cout << "UnitTest command line options:\n\n"
+      << "\t-c\tDo not capture stdout/stderr\n"
 		<< "\t-e\tFail tests on STDERR output\n"
 		<< "\t-i\tSet an explicit ID for the unit test\n"
 		<< "\t-h\tThis help\n"
