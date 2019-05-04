@@ -13,9 +13,6 @@
  Released under Apache 2.0 License.
  ******************************************************************************/
 
-#include <deque>
-#include <condition_variable>
-#include <optional>
 
 #include <cassert>
 #include <atomic>
@@ -125,42 +122,7 @@ private:
    struct StopMessage{};
    using Message = std::variant<StopMessage>;
 
-   std::mutex m_mtxMsgsQueue;
-   std::condition_variable m_cvMoreMsgs;
-   std::deque<Message> m_messages;
-
    //===========================================================
-
-   void sendMessage(const Message& msg) {
-      {
-         std::lock_guard guard(m_mtxMsgsQueue);
-         m_messages.push_back(std::move(msg));
-      }
-      m_cvMoreMsgs.notify_all();
-   }
-
-   Message getMessage() {
-      std::unique_lock guard(m_mtxMsgsQueue);
-      m_cvMoreMsgs.wait(guard, [&](){!m_messages.empty();});
-
-      Message msg = m_messages.back();
-      m_messages.pop_back();
-      return msg;
-   }
-
-   /** Wait for the given time span, or until a message is ready. */
-   std::optional<Message> getMessage(std::chrono::duration timespan) {
-      {
-         std::unique_lock guard(m_mtxMsgsQueue);
-         if(!m_cvMoreMsgs.wait_for(guard, timespan, [&](){!m_messages.empty();})) {
-            return std::nullopt;
-         }
-
-         Message msg = m_messages.back();
-         m_messages.pop_back();
-      }
-      return msg;
-   }
 
 
    enum {

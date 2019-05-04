@@ -26,14 +26,48 @@ GarbageCollector::HandlerID GarbageCollector::registerHandler(std::unique_ptr<Ha
 }
 */
 
-GarbageCollector::GarbageCollector
+GarbageCollector::GarbageCollector(bool s)
 {
+   if (s) {
+      start();
+   }
 }
+
 
 GarbageCollector::~GarbageCollector() {
    stop();
 }
 
+
+bool GarbageCollector::start() {
+   bool doStart = true;
+   if (!m_isStarted.compare_exchange_strong(doStart, false)) {
+      return false;
+   }
+
+   m_mainThread = std::thread(&GarbageCollector::run, this);
+
+   return true;
+}
+
+bool GarbageCollector::stop() {
+   bool doStart = false;
+   if (!m_isStarted.compare_exchange_strong(doStart, true)) {
+      return false;
+   }
+
+   // TODO send the message.
+   m_mainThread.join();
+   return true;
+}
+
+
+void GarbageCollector::run() {
+
+   while(true) {
+
+   }
+}
 
 }
 
