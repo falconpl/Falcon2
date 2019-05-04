@@ -26,6 +26,15 @@ GarbageCollector::HandlerID GarbageCollector::registerHandler(std::unique_ptr<Ha
 }
 */
 
+GarbageCollector::GarbageCollector
+{
+}
+
+GarbageCollector::~GarbageCollector() {
+   stop();
+}
+
+
 }
 
 
