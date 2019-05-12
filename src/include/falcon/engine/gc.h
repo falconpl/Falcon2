@@ -18,6 +18,7 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <falcon/engine/syncqueue.h>
 #include <type_traits>
 #include <falcon/futex.h>
 #include <variant>
@@ -118,10 +119,20 @@ private:
    // TODO: Use a engine-specific implementation of threads with ID/names.
    std::thread m_mainThread;
    std::atomic<bool> m_isStarted{false};
+   bool m_isStopped;
 
    struct StopMessage{};
    using Message = std::variant<StopMessage>;
+   sync_queue<Message> m_messageQueue;
 
+   class Receiver {
+   public:
+      Receiver(GarbageCollector* owner): m_owner(owner) {}
+      void operator() (StopMessage&);
+   private:
+      GarbageCollector* m_owner;
+   };
+   friend class Receiver;
    //===========================================================
 
 

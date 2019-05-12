@@ -399,7 +399,7 @@ const Logger::AutoEnd& operator << (const Logger::AutoEnd& aes, T&& arg)
     return aes;
 }
 
-const Logger::AutoEnd& operator<<(const Logger::AutoEnd&& aes, Logger::category_manipulator&& cat)
+inline const Logger::AutoEnd& operator<<(const Logger::AutoEnd&& aes, Logger::category_manipulator&& cat)
 {
     if(aes.doLog()) {
     	aes.obj().setTempCategory(cat.m_cat);

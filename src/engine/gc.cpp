@@ -14,6 +14,8 @@
 ******************************************************************************/
 
 #include <falcon/engine/gc.h>
+#include <falcon/logger.h>
+#include <type_traits>
 
 namespace Falcon {
 /*
@@ -56,16 +58,27 @@ bool GarbageCollector::stop() {
       return false;
    }
 
-   // TODO send the message.
+   m_messageQueue.emplace(StopMessage());
    m_mainThread.join();
    return true;
 }
 
 
+// VISITOR HELPERS; hopefully, something like this will found its way in the standard
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
 void GarbageCollector::run() {
+   bool running = true;
 
-   while(true) {
+   while(running) {
+      Message msg = m_messageQueue.get();
 
+      std::visit( overloaded{
+         [&](StopMessage&) {
+            //LOG_INFO << "Received Stop Message";
+            running = false;},
+      }, msg);
    }
 }
 
