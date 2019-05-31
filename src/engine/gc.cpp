@@ -42,25 +42,24 @@ GarbageCollector::~GarbageCollector() {
 
 
 bool GarbageCollector::start() {
-   bool doStart = true;
-   if (!m_isStarted.compare_exchange_strong(doStart, false)) {
-      return false;
+   bool doStart = false;
+   if (m_isStarted.compare_exchange_strong(doStart, true)) {
+      // became true
+      m_mainThread = std::thread(&GarbageCollector::run, this);
+      return true;
    }
 
-   m_mainThread = std::thread(&GarbageCollector::run, this);
-
-   return true;
+   return false;
 }
 
 bool GarbageCollector::stop() {
-   bool doStart = false;
-   if (!m_isStarted.compare_exchange_strong(doStart, true)) {
-      return false;
+   bool doStart = true;
+   if (m_isStarted.compare_exchange_strong(doStart, false)) {
+      m_messageQueue.emplace(StopMessage());
+      m_mainThread.join();
+      return true;
    }
-
-   m_messageQueue.emplace(StopMessage());
-   m_mainThread.join();
-   return true;
+   return false;
 }
 
 
