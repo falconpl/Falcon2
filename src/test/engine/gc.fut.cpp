@@ -67,7 +67,7 @@ TEST_F(GCTest, smoke)
 }
 
 
-TEST_F(GCTest, smoke2)
+TEST_F(GCTest, smokeAlloc)
 {
    GarbageCollector gc;
    size_t* allocated;
@@ -86,8 +86,9 @@ TEST_F(GCTest, smoke2)
    EXPECT_EQ(0, stats.black_blocks);
 }
 
-TEST_F(GCTest, smoke3)
+TEST_F(GCTest, smokeMultiAlloc)
 {
+   // Check for multiple allocation to be performed at the end of the block
    Handler handler;
 
    {
@@ -113,5 +114,15 @@ TEST_F(GCTest, smoke3)
 
 }
 
+
+TEST_F(GCTest, smokeCollect)
+{
+   m_gc.start();
+   GarbageCollector::Stats stats = m_gc.getStats();
+   auto waiter = m_gc.forceCollection();
+   auto collected = waiter.get();
+   EXPECT_EQ(0, collected);
+
+}
 
 /* end of gc.fut.cpp */

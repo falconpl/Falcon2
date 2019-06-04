@@ -62,6 +62,14 @@ bool GarbageCollector::stop() {
    return false;
 }
 
+std::future<size_t> GarbageCollector::forceCollection() noexcept
+{
+   CollectMessage cmsg;
+   auto fut = cmsg.collected->get_future();
+   m_messageQueue.push(cmsg);
+   return fut;
+}
+
 
 // VISITOR HELPERS; hopefully, something like this will found its way in the standard
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
@@ -74,9 +82,8 @@ void GarbageCollector::run() {
       Message msg = m_messageQueue.get();
 
       std::visit( overloaded{
-         [&](StopMessage&) {
-            //LOG_INFO << "Received Stop Message";
-            running = false;},
+         [&](StopMessage&) { LOG_INFO << "Received StopMessage"; running = false;},
+         [&](CollectMessage& msg) { LOG_INFO << "Received CollectMessage"; msg.collected->set_value(0);},
       }, msg);
    }
 }

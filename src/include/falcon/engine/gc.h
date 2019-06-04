@@ -24,6 +24,7 @@
 #include <variant>
 #include <vector>
 #include <thread>
+#include <future>
 
 
 #ifndef _FALCON_GC_H_
@@ -110,6 +111,13 @@ public:
     */
    bool stop();
 
+   /** Starts a collection loop (as soon as possible).
+    *
+    * Returns a future that will get the value of collected memory
+    * once the operation is complete.
+    */
+   std::future<size_t> forceCollection() noexcept;
+
 private:
 
    //===========================================================
@@ -122,7 +130,16 @@ private:
    bool m_isStopped;
 
    struct StopMessage{};
-   using Message = std::variant<StopMessage>;
+   struct CollectMessage{
+      std::shared_ptr<std::promise<size_t>> collected;
+      CollectMessage(): collected(std::make_shared<std::promise<size_t>>()) {}
+      CollectMessage(const CollectMessage& other): collected(other.collected) {}
+   };
+
+   using Message = std::variant<
+         StopMessage,
+         CollectMessage
+   >;
    sync_queue<Message> m_messageQueue;
 
    class Receiver {
