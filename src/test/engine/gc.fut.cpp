@@ -70,9 +70,11 @@ TEST_F(GCTest, smoke)
 TEST_F(GCTest, smokeAlloc)
 {
    GarbageCollector gc;
+   GarbageCollector::TokenPtr token = gc.getToken();
+
    size_t* allocated;
    {
-      GarbageCollector::Grabber grabber(gc);
+      GarbageCollector::Grabber grabber = token->make_grabber();
       allocated = grabber.getDataBuffer<size_t>(2);
    }
    GarbageCollector::Stats stats = gc.getStats();
@@ -92,7 +94,7 @@ TEST_F(GCTest, smokeMultiAlloc)
    Handler handler;
 
    {
-      GarbageCollector::Grabber grabber(m_gc);
+      GarbageCollector::Grabber grabber = m_gc.getToken()->make_grabber();
 
       void* memory = grabber.getMemory(sizeof(std::vector<void*>), &handler);
       handler.m_allocated = new(memory) std::vector<void*>;

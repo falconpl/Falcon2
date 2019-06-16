@@ -32,12 +32,37 @@
 
 namespace Falcon {
 
+/**
+ * Garbage Collector and memory manager.
+ *
+ * This garbage collector allocates memory from a generational pool,
+ * marks and reclaims unused blocks and possibly compacts memory in
+ * stop-all loops.
+ *
+ * The collector uses a tri-color marking to determine which blocks
+ * are used and which
+ *
+ * Mutators (garbage collector users) must subscribe using an activity token,
+ * which is used by the collector to coordinate with its users.
+ *
+ * Before starting using the collector, a mutator must acquire a token.
+ * When the mutator is engaged in activity that might alter the memory
+ * handled by the mutator, including asking for new memory, it needs to @b activate
+ * it. When engaged in lengthy operations that are not intended to alter managed memory,
+ * i.e. I/O operations, it can @b deactivate the token, to let the GC know it can perform
+ * stop-the-world operations.
+ *
+ * Periodically, the token holder should invoke @b check, that will allow
+ * the GC to perform stop-the-world operations if necessary.
+ *
+ */
+
 class GarbageCollector {
 public:
    /** Creates a garbage collector ready to run.
     *
     * At creation, the collection thread is not started; it must be independently
-    * started using the start() method, or passing the start paramter as true
+    * started using the start() method, or passing the start parameter as true
     */
    GarbageCollector(bool start=false);
    ~GarbageCollector();
@@ -394,6 +419,8 @@ private:
 
 public:
 
+   class Token;
+
    /**
     * Safe staged allocator for objects.
     *
@@ -403,36 +430,12 @@ public:
     * and their correct initialisation, in a safe area, protected the collector
     * inspection and activity, until the objects are coherently constructed.
     *
-    * Normally, the grabber will commit all the allocated blocks to the garbage
-    * collector at its destruction, unless the isSafe parameter of its constructor
-    * is false.
-    *
-    * In non-safe mode, the method commit() must be explicitly
-    * called, or the destructor of the Grabber will abort the program (in debug),
-    * or discard all the information generated (in release code).
-    *
-    * This is to prevent partially constructed objects (for example after throwing
-    * and exception) to reach the garbage collector, where it would cause
-    * undefined behaviour later on, during scan or collection, that would be
-    * extremely hard to trace back to the original cause.
-    *
-    * In case the constructed objects are coherent at each step of the creation,
-    * or exceptions are correctly handled, the grabber can be created in safe mode,
-    * and the commit() method doesn't need to be explicitly called.
-    *
-    * Requesting further allocation after having invoked commit will assert, or
-    * an exception will be thrown.
-    *
     */
    class Grabber {
    public:
-      Grabber() = delete;
-      Grabber(GarbageCollector& owner, bool isSafe = true) :
-            m_owner(&owner), m_safe(isSafe) {
-      }
       Grabber(const Grabber&) = delete;
       Grabber(Grabber&& other) :
-            m_owner(std::move(other.m_owner)), m_safe(other.m_safe), m_allocated(
+            m_owner(std::move(other.m_owner)),  m_allocated(
                   other.m_allocated), m_blocks(other.m_blocks) {
          assert(!other.m_committed);
          // TODO: Throw a personalised exception
@@ -444,16 +447,11 @@ public:
       }
 
       ~Grabber() {
-         if (m_safe) {
-            commit();
-         } else {
-            assert(m_committed);
-            m_ringRoot.clear(m_owner);
-         }
+         commit();
       }
 
       /**
-       * Get raw memory from the garbae collector
+       * Get raw memory from the garbage collector
        */
       void *getMemory(size_t size, Handler* handler = nullptr) {
          // TODO: Throw a personalised exception
@@ -495,14 +493,48 @@ public:
          }
       }
 
+      void discard() {
+         m_committed = false;
+
+         std::lock_guard guard(m_owner->m_ringLock);
+         // TODO:  move the  data in a discarded ring.
+      }
+
    private:
+      Grabber() = delete;
+      Grabber(GarbageCollector& owner) :
+          m_owner(&owner) {
+      }
+
       GarbageCollector* m_owner;
       bool m_committed { false };
-      bool m_safe;
       GCEntry m_ringRoot;
       size_t m_allocated { 0 };
       unsigned int m_blocks { 0 };
+      friend class Token;
    };
+
+   class Token {
+   public:
+      Grabber make_grabber() {return Grabber(*m_owner);}
+
+      void activate() noexcept;
+      void deactivate() noexcept;
+      void check() noexcept;
+
+   private:
+      Token(GarbageCollector* owner) noexcept:
+         m_owner(owner)
+      {};
+
+      friend class GarbageCollector;
+      GarbageCollector* m_owner;
+   };
+
+   using TokenPtr = std::shared_ptr<Token>;
+   TokenPtr getToken() {
+      return std::shared_ptr<Token>(new Token(this));
+   }
 };
 
 }
