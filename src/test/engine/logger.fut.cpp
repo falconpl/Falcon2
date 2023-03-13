@@ -20,13 +20,13 @@
 
 #include <future>
 
-class TestListener: public Falcon::LogSystem::Listener {
+class TestListener: public falcon::LogSystem::Listener {
 public:
-	std::promise<Falcon::LogSystem::Message> m_msgPromise;
+	std::promise<falcon::LogSystem::Message> m_msgPromise;
 	int m_expected{1};
 
 protected:
-    virtual void onMessage( const Falcon::LogSystem::Message& msg ) override{
+    virtual void onMessage( const falcon::LogSystem::Message& msg ) override{
     	if (--m_expected == 0) {
     		m_msgPromise.set_value(msg);
     	}
@@ -34,7 +34,7 @@ protected:
 };
 
 
-class LoggerTest: public Falcon::testing::TestCase
+class LoggerTest: public falcon::testing::TestCase
 {
 public:
    void SetUp() {
@@ -57,7 +57,7 @@ public:
 	   m_catcher->detach();
    }
 
-   using FutureMessage = std::future<Falcon::LogSystem::Message>;
+   using FutureMessage = std::future<falcon::LogSystem::Message>;
 
    bool waitResult(FutureMessage& msg) {
 	   std::chrono::seconds span (5);
@@ -159,9 +159,9 @@ TEST_F(LoggerTest, CategoryFilter)
 	// We need to wait for 4 log lines in this test
 	m_catcher->m_expected = 3;
 	// we should not receive anything under info
-	LOGGER.level(Falcon::LLINFO);
-	LOGGER.defaultListener()->level(Falcon::LLINFO);
-	LOGGER.categoryFilter(".*::INTERNAL", Falcon::LLTRACE);
+	LOGGER.level(falcon::LLINFO);
+	LOGGER.defaultListener()->level(falcon::LLINFO);
+	LOGGER.categoryFilter(".*::INTERNAL", falcon::LLTRACE);
 
     LOG_CATEGORY("Test::BASE");
 	LOG_INFO << "Line INFO";
@@ -174,7 +174,7 @@ TEST_F(LoggerTest, CategoryFilter)
 	resetCatcher();
 
 	LOGGER.clearFilter();
-	LOGGER.level(Falcon::LLTRACE);
+	LOGGER.level(falcon::LLTRACE);
 	LOG_TRC << "Line FINAL";
 	waitResult(m_caught);
 

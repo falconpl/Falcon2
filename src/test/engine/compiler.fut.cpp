@@ -20,9 +20,9 @@
 FALCON_TEST(Compiler, Smoke)
 {
    std::string value;
-   Falcon::Compiler compiler;
+   falcon::Compiler compiler;
    std::istringstream text("0");
-   Falcon::Code code = compiler.compile(text);
+   falcon::Code code = compiler.compile(text);
    EXPECT_STREQ("0", code.toString());
 }
 

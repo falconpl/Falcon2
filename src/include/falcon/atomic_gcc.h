@@ -18,7 +18,7 @@
 
 #include <falcon/types.h>
 
-namespace Falcon {
+namespace falcon {
 /**  An alias to the atomic integer type.
  */
 typedef volatile int32 atomic_int;

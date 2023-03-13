@@ -24,22 +24,22 @@
 
 #define MESSAGE_DATA "Message"
 
-class TestListener: public Falcon::LogSystem::Listener {
+class TestListener: public falcon::LogSystem::Listener {
 public:
-	std::promise<Falcon::LogSystem::Message> m_msgPromise;
+	std::promise<falcon::LogSystem::Message> m_msgPromise;
 
-    virtual void onMessage( const Falcon::LogSystem::Message& msg ) override{
+    virtual void onMessage( const falcon::LogSystem::Message& msg ) override{
     	m_msgPromise.set_value(msg);
     }
 };
 
 
-class LogStreamTest: public Falcon::testing::TestCase
+class LogStreamTest: public falcon::testing::TestCase
 {
 public:
    void SetUp() {
-      m_log = std::make_unique<Falcon::LogSystem>();
-      m_slst = std::make_shared<Falcon::LogStreamListener>();
+      m_log = std::make_unique<falcon::LogSystem>();
+      m_slst = std::make_shared<falcon::LogStreamListener>();
       m_catcher = std::make_shared<TestListener>();
       m_log->addListener(m_slst);
       m_log->addListener(m_catcher);
@@ -47,7 +47,7 @@ public:
    }
 
    void sendLog() {
-		m_log->log("File", 101, Falcon::LogSystem::LEVEL::INFO, "", MESSAGE_DATA);
+		m_log->log("File", 101, falcon::LogSystem::LEVEL::INFO, "", MESSAGE_DATA);
    }
 
    bool waitResult() {
@@ -88,10 +88,10 @@ public:
 		EXPECT_NE(std::string::npos, out.str().find(MESSAGE_DATA));
    }
 
-   std::unique_ptr<Falcon::LogSystem> m_log;
-   std::shared_ptr<Falcon::LogStreamListener> m_slst;
+   std::unique_ptr<falcon::LogSystem> m_log;
+   std::shared_ptr<falcon::LogStreamListener> m_slst;
    std::shared_ptr<TestListener> m_catcher;
-   std::future<Falcon::LogSystem::Message> m_caught;
+   std::future<falcon::LogSystem::Message> m_caught;
 
 };
 

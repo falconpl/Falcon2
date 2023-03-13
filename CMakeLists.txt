@@ -57,6 +57,9 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${FALCON_LIB_DIR}" CACHE
   "Where to put the archives"
 )
 
+#include("cmake/find_boost.cmake")
+#set(Boost_DIR ${BOOST_ROOT})
+
 include_directories( src/include )
 include_directories( "${CMAKE_BINARY_DIR}/${FALCON_INC_DIR}" )
 

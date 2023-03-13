@@ -16,7 +16,7 @@
 #include <falcon/logsystem.h>
 #include <algorithm>
 
-namespace Falcon {
+namespace falcon {
 
 LogSystem::LogSystem(bool startNow):
 		m_logThread(0),

@@ -15,7 +15,7 @@
 
 #include <falcon/logger.h>
 
-namespace Falcon {
+namespace falcon {
 
 thread_local std::string Logger::m_category{""};
 thread_local std::string Logger::m_tempCategory{""};

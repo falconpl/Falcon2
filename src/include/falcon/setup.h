@@ -75,7 +75,7 @@
    #ifdef __GNUC__
 
 	   #define FALCON_MODULE_TYPE \
-	      extern "C" __declspec(dllexport) ::Falcon::Module *
+	      extern "C" __declspec(dllexport) ::falcon::Module *
       #define LLFMT    "ll"
       #define I64LIT(x) (x ## LL)
       #define UI64LIT(x) (x ## ULL)

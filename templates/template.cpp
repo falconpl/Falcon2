@@ -13,7 +13,7 @@
   Released under Apache 2.0 License.
 ******************************************************************************/
 
-namespace Falcon {
+namespace falcon {
 
 }
 

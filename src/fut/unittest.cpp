@@ -28,7 +28,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace Falcon {
+namespace falcon {
 namespace testing{
 
 namespace {

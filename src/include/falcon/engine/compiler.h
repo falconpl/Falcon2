@@ -17,9 +17,9 @@
 #define _FALCON_COMPILER_H_
 
 #include <istream>
-#include <falcon/engine/code.h>
+#include "falcon/engine/code.h"
 
-namespace Falcon {
+namespace falcon {
 class Compiler {
 
 public:

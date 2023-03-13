@@ -1,27 +1,30 @@
 /*****************************************************************************
   FALCON - The Falcon Programming Language
-  FILE: fut_main.cpp
+  FILE: deepflatcopyhandler.h
 
-  Default main() function for unit tests
+  Root handler for the deep items with a flat copy behavior.
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
-  Begin : Sat, 13 Jan 2018 21:24:04 +0000
-  Touch : Tue, 16 Jan 2018 22:29:26 +0000
+  Begin : 
+  Touch : 
 
   -------------------------------------------------------------------
   (C) Copyright 2018 The Falcon Programming Language
   Released under Apache 2.0 License.
 ******************************************************************************/
 
-#include <falcon/fut/unittest.h>
-#include <cassert>
+#ifndef _FALCON_DEEPFLATCOPYHANDLER_H_
+#define _FALCON_DEEPFLATCOPYHANDLER_H_
 
-extern "C" {
-	int main(int argc, char* argv[]) {
-		assert(argc > 0);
-		return ::falcon::testing::UnitTest::singleton()->main(argc, argv);
-	}
+#include "falcon/engine/deephandler.h"
+
+namespace falcon {
+
+template<typename T>
+struct DeepFlatCopyHandler: public DeepHandler<T> {
+    bool isCopyFlat() const noexcept override { return true; }
+};
+
 }
 
-/* end of fut_main.cpp */
-
+#endif

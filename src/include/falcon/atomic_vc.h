@@ -24,7 +24,7 @@
 #include <intrin.h>
 #endif
 
-namespace Falcon {
+namespace falcon {
 /**  An alias to the atomic integer type.
  */
 typedef LONG atomic_int;

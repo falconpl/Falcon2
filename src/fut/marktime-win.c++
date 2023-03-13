@@ -16,7 +16,7 @@
 #include <falcon/fut/marktime.h>
 #include <windows.h>
 
-namespace Falcon {
+namespace falcon {
 namespace testing {
 
 void FALCON_API_ markTime(int64& currentMillisecs)

@@ -18,7 +18,7 @@
 #include <sys/time.h>
 #include <stdexcept>
 
-namespace Falcon {
+namespace falcon {
 namespace testing {
 
 void markTime(int64& currentMillisecs)

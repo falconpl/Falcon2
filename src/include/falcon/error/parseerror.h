@@ -18,7 +18,7 @@
 
 #include <stdexcept>
 
-namespace Falcon {
+namespace falcon {
 
 class ParseError: public std::runtime_error
 {

@@ -20,9 +20,12 @@
 #include <stddef.h>
 #include <sys/types.h>
 
-namespace Falcon {
+#include <string>
+
+namespace falcon {
 
 typedef char* cstring;
+typedef const char* ccstring;
 
 typedef unsigned char byte;
 typedef unsigned char* bytearray;
@@ -30,6 +33,7 @@ typedef unsigned char* bytearray;
 typedef byte uint8;
 typedef unsigned short int uint16;
 typedef unsigned int uint32;
+typedef double numeric;
 
 #ifdef _MSC_VER
 typedef unsigned __int64 uint64;
@@ -51,10 +55,11 @@ typedef long long int int64;
 typedef uint32 length_t;
 typedef uint32 char_t;
 
+// Placeholder for strings
+using String = std::string;
 }
 
 #endif /* _FALCON_TYPES_H_ */
-
 
 /* end of types.h */
 

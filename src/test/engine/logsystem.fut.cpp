@@ -23,22 +23,22 @@
 
 
 
-class TestListener: public Falcon::LogSystem::Listener {
+class TestListener: public falcon::LogSystem::Listener {
 public:
-	std::promise<Falcon::LogSystem::Message> m_msgPromise;
+	std::promise<falcon::LogSystem::Message> m_msgPromise;
 
 protected:
-    virtual void onMessage( const Falcon::LogSystem::Message& msg ) override{
+    virtual void onMessage( const falcon::LogSystem::Message& msg ) override{
     	m_msgPromise.set_value(msg);
     }
 };
 
 
-class LogTest: public Falcon::testing::TestCase
+class LogTest: public falcon::testing::TestCase
 {
 public:
    void SetUp() {
-      m_log = std::make_unique<Falcon::LogSystem>();
+      m_log = std::make_unique<falcon::LogSystem>();
       m_listener = std::make_shared<TestListener>();
       m_catcher = std::make_shared<TestListener>();
       m_log->addListener(m_listener);
@@ -51,11 +51,11 @@ public:
 	   m_log->stop();
    }
 
-   void sendLog(Falcon::LogSystem::LEVEL level, const std::string& category) {
+   void sendLog(falcon::LogSystem::LEVEL level, const std::string& category) {
 		m_log->log("File", 101, level, category, "Message");
    }
 
-   using FutureMessage = std::future<Falcon::LogSystem::Message>;
+   using FutureMessage = std::future<falcon::LogSystem::Message>;
 
    bool waitResult(FutureMessage& msg) {
 	   std::chrono::seconds span (5);
@@ -70,10 +70,10 @@ public:
 	   // Stop waits for the log thread to be stopped, so  we know
 	   // we have a stable situation on the message queues.
 	    m_log->stop();
-		Falcon::LogSystem::Diags diags;
+		falcon::LogSystem::Diags diags;
 		m_log->getDiags(diags);
 
-		EXPECT_EQ(Falcon::LogSystem::MESSAGE_POOL_THRESHOLD, diags.m_poolSize);
+		EXPECT_EQ(falcon::LogSystem::MESSAGE_POOL_THRESHOLD, diags.m_poolSize);
 		EXPECT_EQ(2, diags.m_activeListeners);
 		EXPECT_EQ(enabled, diags.m_enabledListeners);
 		EXPECT_EQ(0, diags.m_pendingListeners);
@@ -84,7 +84,7 @@ public:
 		EXPECT_LE(msgs, diags.m_maxMsgQueueSize);
    }
 
-   std::unique_ptr<Falcon::LogSystem> m_log;
+   std::unique_ptr<falcon::LogSystem> m_log;
    std::shared_ptr<TestListener> m_listener;
    std::shared_ptr<TestListener> m_catcher;
    FutureMessage m_incoming;
@@ -94,10 +94,10 @@ public:
 
 
 TEST_F(LogTest, Smoke) {
-	Falcon::LogSystem::Diags diags;
+	falcon::LogSystem::Diags diags;
 	m_log->getDiags(diags);
 
-	EXPECT_EQ(Falcon::LogSystem::MESSAGE_POOL_THRESHOLD, diags.m_poolSize);
+	EXPECT_EQ(falcon::LogSystem::MESSAGE_POOL_THRESHOLD, diags.m_poolSize);
 	EXPECT_EQ(0, diags.m_activeListeners);
 	EXPECT_EQ(0, diags.m_enabledListeners);
 	EXPECT_EQ(2, diags.m_pendingListeners);
@@ -111,15 +111,15 @@ TEST_F(LogTest, Smoke) {
 
 TEST_F(LogTest, ReceiveMessage) {
 	// Send the log
-	sendLog(Falcon::LogSystem::LEVEL::INFO, "Category");
+	sendLog(falcon::LogSystem::LEVEL::INFO, "Category");
 
 	// Wait for the message to be received.
 	if(waitResult(m_incoming)) {
 		//Checks:
-		Falcon::LogSystem::Message msg = m_incoming.get();
+		falcon::LogSystem::Message msg = m_incoming.get();
 		EXPECT_STREQ("File", msg.m_file);
 		EXPECT_EQ(101, msg.m_line);
-		EXPECT_EQ(Falcon::LogSystem::LEVEL::INFO, msg.m_level);
+		EXPECT_EQ(falcon::LogSystem::LEVEL::INFO, msg.m_level);
 		EXPECT_STREQ("Category", msg.m_category);
 		EXPECT_STREQ("Message", msg.m_message);
 		sanityCheck();
@@ -129,7 +129,7 @@ TEST_F(LogTest, ReceiveMessage) {
 TEST_F(LogTest, ThrowCategory) {
 	EXPECT_THROW(
 			m_listener->category("*"),
-			Falcon::LogSystem::InvalidCategory
+			falcon::LogSystem::InvalidCategory
 	);
 }
 
@@ -137,8 +137,8 @@ TEST_F(LogTest, DiscardLevel) {
 	// We now check that a listener is not sent messages
 	// it is not interested in (by level).
 
-	m_listener->level(Falcon::LogSystem::LEVEL::DEBUG);
-	sendLog(Falcon::LogSystem::LEVEL::TRACE, "Category");
+	m_listener->level(falcon::LogSystem::LEVEL::DEBUG);
+	sendLog(falcon::LogSystem::LEVEL::TRACE, "Category");
 
 	// Wait for the message to be received.
 	if(waitResult(m_caught)) {
@@ -155,7 +155,7 @@ TEST_F(LogTest, DiscardLevel) {
 TEST_F(LogTest, DiscardCategory) {
 	//Listener with a non-matching category should be ignored.
 	m_listener->category("SomeCategory");
-	sendLog(Falcon::LogSystem::LEVEL::CRITICAL, "Category");
+	sendLog(falcon::LogSystem::LEVEL::CRITICAL, "Category");
 
 	// Wait for the message to be received.
 	if(waitResult(m_caught)) {
@@ -172,7 +172,7 @@ TEST_F(LogTest, DiscardCategory) {
 TEST_F(LogTest, ListenerDisabled) {
 	// Disabled listeners must not receive messages.
 	m_listener->enable(false);
-	sendLog(Falcon::LogSystem::LEVEL::TRACE, "Category");
+	sendLog(falcon::LogSystem::LEVEL::TRACE, "Category");
 
 	// Wait for the message to be received.
 	if(waitResult(m_caught)) {
@@ -189,12 +189,12 @@ TEST_F(LogTest, ListenerDisabled) {
 TEST_F(LogTest, RightCategory) {
 	// Be sure that a listener gets intended categories
 	m_listener->category("Good.*");
-	sendLog(Falcon::LogSystem::LEVEL::INFO, "GoodCategory");
+	sendLog(falcon::LogSystem::LEVEL::INFO, "GoodCategory");
 
 	// Wait for the message to be received.
 	if(waitResult(m_incoming)) {
 		//Checks:
-		Falcon::LogSystem::Message msg = m_incoming.get();
+		falcon::LogSystem::Message msg = m_incoming.get();
 		EXPECT_STREQ("GoodCategory", msg.m_category);
 		sanityCheck();
 	}

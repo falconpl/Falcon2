@@ -15,7 +15,7 @@
 
 #include <falcon/futex.h>
 
-namespace Falcon {
+namespace falcon {
 std::atomic<unsigned int> RFutex::s_count{0};
 thread_local unsigned int RFutex::s_thread_id{0};
 }

@@ -23,7 +23,7 @@
 #ifndef _FALCON_PAGEDSTACK_H_
 #define _FALCON_PAGEDSTACK_H_
 
-namespace Falcon {
+namespace falcon {
 /**
  * Stack-like structure indefinitely growable.
  *

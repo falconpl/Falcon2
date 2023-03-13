@@ -16,7 +16,7 @@
 #ifndef @DEFINE_NAME@
 #define @DEFINE_NAME@
 
-namespace Falcon {
+namespace falcon {
 
 }
 

@@ -22,7 +22,7 @@
 
 
 
-namespace Falcon {
+namespace falcon {
 /**
  * Lightweight non-blocking mutex.
  *

@@ -22,7 +22,7 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace Falcon {
+namespace falcon {
 namespace testing{
 
 class TestCase::Private
@@ -229,7 +229,7 @@ void TestCase::run()
    catch(...) {
       p->lapse.markEnd();
       p->status = ERROR;
-      p->failDesc = "Unknown error caught by Falcon::testing framework";
+      p->failDesc = "Unknown error caught by falcon::testing framework";
    }
 }
 

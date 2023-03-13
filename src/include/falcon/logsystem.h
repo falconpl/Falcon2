@@ -28,9 +28,7 @@
 #include <iostream>
 
 
-namespace Falcon {
-
-class String;
+namespace falcon {
 
 /**
  * Engine-level pluggable asynchronous logging facility.

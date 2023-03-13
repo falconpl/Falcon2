@@ -16,7 +16,7 @@
 #ifndef _FALCON_CONFIG_H_
 #define _FALCON_CONFIG_H_
 
-namespace Falcon {
+namespace falcon {
 
 //============================================
 // Version informations

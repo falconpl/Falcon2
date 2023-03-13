@@ -18,7 +18,7 @@
 
 #include <string>
 
-namespace Falcon {
+namespace falcon {
 class Code {
 public:
 	Code(const std::string& source="", int m_line=0) noexcept;

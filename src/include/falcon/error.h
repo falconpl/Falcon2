@@ -18,7 +18,7 @@
 
 #include <falcon/error/parseerror.h>
 
-namespace Falcon {
+namespace falcon {
 
 }
 

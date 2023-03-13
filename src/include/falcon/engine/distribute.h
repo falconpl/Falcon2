@@ -16,7 +16,7 @@
 #ifndef _FALCON_DISTRIBUTE_H_
 #define _FALCON_DISTRIBUTE_H_
 
-namespace Falcon {
+namespace falcon {
 
 template<typename _iterator, typename _tgt>
 void distribute(_iterator&& iter, _tgt& tgt)
@@ -33,7 +33,7 @@ void distribute(_iterator&& iter, _tgt& tgt)
  * std::string sh, sw;
  * int one, two;
  *
- * Falcon::distribute(array.begin(), one, sh, two, sw);
+ * falcon::distribute(array.begin(), one, sh, two, sw);
  *
  * std::cout << sh << ": " << one << '\n'
  * 	         << sw << ": " << two << '\n';

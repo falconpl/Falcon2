@@ -16,7 +16,7 @@
 #ifndef _FALCON_SINGLETON_H_
 #define _FALCON_SINGLETON_H_
 
-namespace Falcon {
+namespace falcon {
 
 /**
  * An utility class used for well known type handlers.

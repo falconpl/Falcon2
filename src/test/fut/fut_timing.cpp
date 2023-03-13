@@ -15,7 +15,7 @@
 #include <falcon/fut/fut.h>
 #include <falcon/fut/marktime.h>
 
-namespace Falcon {
+namespace falcon {
 
 class CAT1: public testing::TestCase
 {

@@ -16,7 +16,15 @@
 file(GLOB SOURCES *.cpp)
 add_definitions(-DFALCON_ENGINE_EXPORTS)
      
+# Find Boost.Multiprecision
+#set(Boost_NO_BOOST_CMAKE ON)
+find_package(Boost REQUIRED) # COMPONENTS multiprecision)
+
+
 add_library(falcon_engine SHARED
    ${SOURCES} )
+
+# Link against Boost.Multiprecision
+target_link_libraries(falcon_engine PUBLIC Boost::headers)
 
 # end of CMakeLists.txt

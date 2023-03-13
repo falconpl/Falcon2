@@ -2,7 +2,7 @@
   FALCON2 - The Falcon Programming Language
   FILE: singleton.fut.cpp
 
-  Test the Singleton class
+  Test the Item class
   -------------------------------------------------------------------
   Author: Giancarlo Niccolai
   Begin : Sat, 23 Feb 2019 05:21:08 +0000
@@ -16,18 +16,32 @@
 #include <falcon/fut/fut.h>
 #include <string>
 
-#include "../../include/falcon/singleton.h"
+#include "falcon/engine/item.h"
 
 
 namespace falcon {
-Singleton<std::string> theString;
 
-FALCON_TEST(Compiler, Smoke)
+FALCON_TEST(Item, Smoke)
 {
-	*theString.mtbl = "Hello";
-	EXPECT_STREQ("Hello", *theString);
-	EXPECT_STRNE("Something Else", *theString);
-	EXPECT_EQ(*theString, *theString.get());
+	Item item(0LL);
+  EXPECT_EQ(0, item.toInt());
+}
+
+FALCON_TEST(Item, StringItem)
+{
+	Item item("Hello world");
+  EXPECT_EQ("Hello world", item.toString());
+}
+
+FALCON_TEST(Item, StringBool)
+{
+  EXPECT_TRUE(Item("abc").toBool());
+  EXPECT_FALSE(Item("").toBool());
+}
+
+FALCON_TEST(Item, StringNumber)
+{
+  EXPECT_EQ(100LL, Item("100").toInt());
 }
 
 }

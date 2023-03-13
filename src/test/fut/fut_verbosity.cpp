@@ -47,7 +47,7 @@ namespace {
 
 void doTest(const std::string& name, std::string& out, std::string& err)
 {
-   Falcon::testing::UnitTest* ut = Falcon::testing::UnitTest::singleton();
+   falcon::testing::UnitTest* ut = falcon::testing::UnitTest::singleton();
    std::ostringstream outCapture;
    std::ostringstream errCapture;
 
@@ -79,12 +79,12 @@ void doTest(const std::string& name, std::string& out, std::string& err)
 
 int test( int id )
 {
-   Falcon::testing::UnitTest* ut = Falcon::testing::UnitTest::singleton();
+   falcon::testing::UnitTest* ut = falcon::testing::UnitTest::singleton();
    std::string out, err;
 
    switch(id) {
    case 1:
-      ut->setVerbosity(Falcon::testing::UnitTest::SILENT);
+      ut->setVerbosity(falcon::testing::UnitTest::SILENT);
       // The test must fail but nothing should be printed
       doTest("Verbosity::ExplicitFail", out, err);
       if(!out.empty() || !err.empty()) {
@@ -93,7 +93,7 @@ int test( int id )
       break;
 
    case 2:
-         ut->setVerbosity(Falcon::testing::UnitTest::REPORT_FAILURE);
+         ut->setVerbosity(falcon::testing::UnitTest::REPORT_FAILURE);
          doTest("Verbosity::ExplicitFail", out, err);
          if(out.find(EXPLICIT_FAILURE) == std::string::npos || !err.empty()) {
             return 1;
@@ -101,7 +101,7 @@ int test( int id )
          break;
 
    case 3:
-         ut->setVerbosity(Falcon::testing::UnitTest::REPORT_STATUS);
+         ut->setVerbosity(falcon::testing::UnitTest::REPORT_STATUS);
          doTest("Verbosity::TestFail", out, err);
          if(out.find(SENTENCE_STDOUT) == std::string::npos || !err.empty()) {
             return 1;
@@ -109,7 +109,7 @@ int test( int id )
          break;
 
    case 4:
-         ut->setVerbosity(Falcon::testing::UnitTest::REPORT_STDERR);
+         ut->setVerbosity(falcon::testing::UnitTest::REPORT_STDERR);
          doTest("Verbosity::onCerr", out, err);
          if(out.find(SENTENCE_STDOUT) == std::string::npos ||
             out.find(EXPLICIT_ERROR) == std::string::npos) {
@@ -118,7 +118,7 @@ int test( int id )
          break;
 
    case 5:
-           ut->setVerbosity(Falcon::testing::UnitTest::REPORT_STDOUT);
+           ut->setVerbosity(falcon::testing::UnitTest::REPORT_STDOUT);
            doTest("Verbosity::onCerr", out, err);
            if(out.find(SENTENCE_STDOUT) == std::string::npos ||
               out.find(EXPLICIT_ERROR) == std::string::npos) {
@@ -137,7 +137,7 @@ int test( int id )
 
 int main(int argc, char* argv[])
 {
-   Falcon::testing::UnitTest* ut = Falcon::testing::UnitTest::singleton();
+   falcon::testing::UnitTest* ut = falcon::testing::UnitTest::singleton();
    ut->detectTestName(argv[0]);
    ut->parseParams(argc-1, argv+1);
 

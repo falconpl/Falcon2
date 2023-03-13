@@ -16,7 +16,7 @@
 #include <falcon/fut/fut.h>
 #include <iostream>
 
-class MyTest: public Falcon::testing::TestCase
+class MyTest: public falcon::testing::TestCase
 {
 public:
    // Normally we don't need constructors,
@@ -43,7 +43,7 @@ TEST_F(MyTest, SetUpCalled) {
 
 int main(int argc, char* argv[])
 {
-   Falcon::testing::UnitTest* ut = Falcon::testing::UnitTest::singleton();
+   falcon::testing::UnitTest* ut = falcon::testing::UnitTest::singleton();
    ut->detectTestName(argv[0]);
    if (!ut->parseParams(argc - 1, argv + 1)) {
       return 0;

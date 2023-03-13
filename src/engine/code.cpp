@@ -16,7 +16,7 @@
 #include <falcon/engine/code.h>
 #include <algorithm>
 
-namespace Falcon {
+namespace falcon {
 
 Code::Code(const std::string& source, int line) noexcept :
 		m_source(source), m_line(line), m_data(new char[1000])

@@ -19,7 +19,7 @@
 #include "logsystem.h"
 #include <streambuf>
 
-namespace Falcon {
+namespace falcon {
 
 class FALCON_API_ LogStreamListener: public LogSystem::Listener
 {
@@ -60,7 +60,7 @@ public:
 		m_pout = out;
 	}
 
-    virtual void onMessage( const Falcon::LogSystem::Message& msg ) override;
+    virtual void onMessage( const falcon::LogSystem::Message& msg ) override;
 
 private:
 

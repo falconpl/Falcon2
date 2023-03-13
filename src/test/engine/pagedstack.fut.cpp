@@ -21,7 +21,7 @@ Released under Apache 2.0 License.
 
 #include <iostream>
 
-class PagedStackTest: public Falcon::testing::TestCase
+class PagedStackTest: public falcon::testing::TestCase
 {
 public:
    struct SomeStruct {
@@ -37,7 +37,7 @@ public:
 
    using datatype = std::variant<int, std::string, SomeStruct>;
    // Usinga mutex to check for deadlocks.
-   using PagedStack = Falcon::PagedStack<datatype, std::allocator, std::mutex>;
+   using PagedStack = falcon::PagedStack<datatype, std::allocator, std::mutex>;
    PagedStack m_stack{4,2};
 
    void SetUp() {}
@@ -178,7 +178,7 @@ TEST_F(PagedStackTest, double_push)
 
 TEST_F(PagedStackTest, simple_emplace)
 {
-   Falcon::PagedStack<SomeStruct> emplacer;
+   falcon::PagedStack<SomeStruct> emplacer;
 
    emplacer.push_emplace(1, "Hello world");
 
@@ -192,7 +192,7 @@ TEST_F(PagedStackTest, simple_emplace)
 
 TEST_F(PagedStackTest, double_emplace)
 {
-   Falcon::PagedStack<SomeStruct> emplacer;
+   falcon::PagedStack<SomeStruct> emplacer;
 
    emplacer.push_emplace(0, "Hello world");
    emplacer.push_emplace(1, "Hello again");
@@ -208,7 +208,7 @@ TEST_F(PagedStackTest, double_emplace)
 
 TEST_F(PagedStackTest, top)
 {
-   Falcon::PagedStack<SomeStruct> emplacer;
+   falcon::PagedStack<SomeStruct> emplacer;
 
    emplacer.push_emplace(0, "Hello world");
    EXPECT_FALSE(emplacer.empty());
@@ -679,7 +679,7 @@ TEST_F(PagedStackTest, allocator_smoke)
    SharedMem dataAlloc;
    SharedMem pageAlloc;
 
-   using dstack = Falcon::PagedStack<int, TestAllocator>;
+   using dstack = falcon::PagedStack<int, TestAllocator>;
    {
       auto testalloc = dstack(4,2,
             dstack::allocator_type(&pageAlloc, &dataAlloc));
@@ -701,7 +701,7 @@ TEST_F(PagedStackTest, allocator)
    SharedMem dataAlloc;
    SharedMem pageAlloc;
 
-   using dstack = Falcon::PagedStack<std::string, TestAllocator>;
+   using dstack = falcon::PagedStack<std::string, TestAllocator>;
    {
       auto testalloc = dstack(4,2, TestAllocator<dstack::value_type>(&pageAlloc, &dataAlloc));
 

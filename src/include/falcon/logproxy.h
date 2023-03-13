@@ -18,7 +18,7 @@
 
 #include <falcon/logsystem.h>
 
-namespace Falcon {
+namespace falcon {
 
 /**
  *   Log listener using another listener's message facility.

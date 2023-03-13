@@ -36,12 +36,12 @@
       static _CLASSNAME_* _instance_;\
       };\
       _CLASSNAME_* _CLASSNAME_::_instance_ = \
-            static_cast<_CLASSNAME_*>(::Falcon::testing::UnitTest::singleton()->\
+            static_cast<_CLASSNAME_*>(::falcon::testing::UnitTest::singleton()->\
                addTestCase(_COMPONENT_,_CASE_,new _CLASSNAME_));\
       void _CLASSNAME_::test()
 
 #define FALCON_TEST(_COMPONENT_, _NAME_) \
-    _FALCON_TEST_DECLARE_CLASS_(FALCON_TEST_CLASS_NAME(_COMPONENT_,_NAME_),Falcon::testing::TestCase,#_COMPONENT_,#_NAME_)
+    _FALCON_TEST_DECLARE_CLASS_(FALCON_TEST_CLASS_NAME(_COMPONENT_,_NAME_),falcon::testing::TestCase,#_COMPONENT_,#_NAME_)
 
 #define FALCON_TEST_F(_COMPONENT_, _NAME_) \
     _FALCON_TEST_DECLARE_CLASS_(FALCON_TEST_CLASS_NAME(_COMPONENT_,_NAME_),_COMPONENT_,#_COMPONENT_,#_NAME_)
@@ -86,11 +86,11 @@
 
 
 #define EXPECT_FLOAT_EQ( _EXPECTED_, _ACTUAL_) \
-            FALCON_TEST_CHECK_LOGIC(static_cast<::Falcon::int64>(_EXPECTED_*10000.0),\
-               ==,static_cast<::Falcon::int64>(_ACTUAL_*10000.0))
+            FALCON_TEST_CHECK_LOGIC(static_cast<::falcon::int64>(_EXPECTED_*10000.0),\
+               ==,static_cast<::falcon::int64>(_ACTUAL_*10000.0))
 #define EXPECT_FLOAT_NE( _EXPECTED_, _ACTUAL_) \
-            FALCON_TEST_CHECK_LOGIC(static_cast<::Falcon::int64>(_EXPECTED_*10000.0),\
-               !=,static_cast<::Falcon::int64>(_ACTUAL_*10000.0))
+            FALCON_TEST_CHECK_LOGIC(static_cast<::falcon::int64>(_EXPECTED_*10000.0),\
+               !=,static_cast<::falcon::int64>(_ACTUAL_*10000.0))
 
 #define FAIL(_MESSAGE_) \
    this->checkFail( __FILE__, __LINE__, _MESSAGE_, "" );
@@ -127,7 +127,7 @@
 
 #define FALCON_TEST_MAIN      \
       int main(int argc, char* argv[]) { \
-         return ::Falcon::testing::UnitTest::singleton()->main(argc, argv); \
+         return ::falcon::testing::UnitTest::singleton()->main(argc, argv); \
       }
 
 

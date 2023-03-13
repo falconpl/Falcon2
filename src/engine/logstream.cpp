@@ -18,9 +18,9 @@
 #include <iostream>
 #include <iomanip>
 
-namespace Falcon {
+namespace falcon {
 
-void LogStreamListener::onMessage( const Falcon::LogSystem::Message& msg )
+void LogStreamListener::onMessage( const falcon::LogSystem::Message& msg )
 {
 	auto now = std::chrono::system_clock::now();
 	time_t tt = std::chrono::system_clock::to_time_t(now);
